@@ -1148,7 +1148,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   #================================================================================= 
   
   kaplanMeierCurves <- function( id.start, id.end, cens.leaf = TRUE,  id.cens = c(), 
-                                UM = "days" ){
+                                UM = "days", plotIt = TRUE ){
     
     s <- getDataStructure()
     out <- loadedDataset
@@ -1179,6 +1179,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     check <- which( s$lst.nodi[[ as.character(id.start) ]]$IPP %in% s$lst.nodi[[ as.character(id.end) ]]$IPP)
     if( identical(check, integer(0)) ){
       to_ret <- NULL
+      KM0 <- NA
     } else {
 
       #ciclo su tutti gli id di coorte e calcolo deltaT come:
@@ -1197,10 +1198,9 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
           }
         }
         
-        if(length(time.end) == 1){
-          if(is.na(time.end)){
-            deltaT<-NA
-          }else{
+        if(length(time.end) == 1) {
+          deltaT <- NA
+          if(!is.na(time.end)){
             deltaT<-time.end-time.start
           }
           # puo' accadere che i due nodi di end siano sullo stesso ramo e che lo stesso paziente li sperimenti entrambi---> E' giusto???
@@ -1214,7 +1214,6 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
             deltaT <- max( time.end,na.rm = TRUE) - time.start
           }
         }
-
         return( list( "id" = id, "deltaT" = deltaT ) )
       })
       
@@ -1242,26 +1241,22 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
               matrice.KM <- rbind(matrice.KM, c(tmp[[i]]$id, delta,"0"))
             } else {
               if(cens.leaf== FALSE){
-                
                 # CASO 1:  uso come cens SOLO i pazi che transitano nei nodi inseriti come nodi cens
                 matrice.KM <- matrice.KM
               } else {
-                
                 # CASO 2:  uso come cens sia i paz che transitano nei nodi cens che i paz che vanno nelle leaf
                 #         per questi calcolo delta t come t.ultimo evento della traccia - t.start
                 delta <- out$pat.process[[tmp[[i]]$id]]$pMineR.deltaDate[nrow(out$pat.process[[tmp[[i]]$id]])]
                 matrice.KM <- rbind(matrice.KM, c(tmp[[i]]$id, delta,"0"))
               }
             }
-            
           }else{
-            
             # restano fuori caso 3 e 4 --> in entrambi questi casi rientro nella tecnica: non ho nodi cens uso come
             #paz cens quelli delle leaf
             delta <- out$pat.process[[tmp[[i]]$id]]$pMineR.deltaDate[nrow(out$pat.process[[tmp[[i]]$id]])]
             matrice.KM <- rbind(matrice.KM, c(tmp[[i]]$id, delta,"0"))
           }
-        }else{
+        } else {
           matrice.KM <- rbind( matrice.KM, c(tmp[[i]]$id, tmp[[i]]$deltaT, "1"))
         }
       }
@@ -1271,13 +1266,13 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
 
       if(class(matrice.KM$outcome)=="factor"){
         matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
-      }else{
+      } else {
         matrice.KM$outcome <- as.numeric(matrice.KM$outcome)
       }
       
       if(class(matrice.KM$time)=="factor"){
         matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
-      }else{
+      } else {
         matrice.KM$time <- as.numeric(matrice.KM$time)
       }
 
@@ -1287,14 +1282,16 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       if( UM == "months") matrice.KM$time <- matrice.KM$time / (43800)
       
       KM0 <- survfit(Surv(time, outcome)~1,   data=matrice.KM)
-      to_ret<-plot(KM0,
-                   main=paste0(s$lst.nodi[[as.character(id.start)]]$event, "->", unlist(lapply(id.end, function(nodo){ s$lst.nodi[[as.character(nodo)]]$event}))),
-                   xlab=UM,
-                   ylab="p",
-                   mark.time=TRUE)
+      
+      to_ret <- NA
+      if( plotIt == TRUE ) {
+        titolo <- paste0(s$lst.nodi[[as.character(id.start)]]$event, "->", unlist(lapply(id.end, function(nodo){ s$lst.nodi[[as.character(nodo)]]$event})) )
+        to_ret <- plot(KM0,
+                       main = titolo,xlab = UM, ylab = "p", mark.time = TRUE )
+      }
     }
 
-    return(to_ret)
+    return( "KM0" = KM0, "to_ret" = to_ret )
   }
   
   #=================================================================================
