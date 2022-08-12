@@ -1526,6 +1526,52 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     
   }    
   
+  # ==========================================================================
+  # selectSubCohorts
+  #   restituisce i dei sub-pat.processes dove la prima riga e l'ultima corrispondono
+  #   alla selezione desiderata
+  # ==========================================================================
+  selectSubCohorts <- function( arr.from, lst.to  ) {
+    objCFM.DS <- getDataStructure()
+    objDL.out <- loadedDataset
+    colonnaEvento <- objDL.out$csv.EVENTName
+    lst.res <- list()
+    for( i in 1:length(arr.from) ) {
+      
+      # Prendi gli IPP dei nodi di destinazione (sono sicuramente anche quelli di partenza)
+      arr.IPP.to <- unique(unlist(lapply(lst.to[[i]], function(nodo){ objCFM.DS$lst.nodi[[ nodo ]]$IPP  } )))
+      
+      # Prendi i dati utli per il from
+      profondita.from <- objCFM.DS$lst.nodi[[ arr.from[i]  ]]$depth
+      evento.profondita.from <- objCFM.DS$lst.nodi[[ arr.from[i]  ]]$evento
+      
+      # per ogni paziente, estrai la riga del pat.process dove si trova i target
+      arr.depth <- unlist(lapply( arr.IPP.to, function(IPP) { 
+        subMM <- objDL.out$pat.process[[IPP]]
+        
+        # Vediamo quale "to" fa match
+        quali.match <- matrix(unlist(lapply(lst.to[[i]], function(nodo){ 
+          c( (IPP %in%  objCFM.DS$lst.nodi[[ nodo ]]$IPP) , objCFM.DS$lst.nodi[[ nodo ]]$depth ) } 
+        )),ncol=2,byrow = T)
+        
+        # retituisci il primo, cronologicamente, fra i possibili
+        quali.match <- matrix(quali.match[which(quali.match[,1] == 1),],ncol=2,byrow = T)
+        best.dept <- quali.match[order(quali.match[,2],decreasing = FALSE),2]
+        return(best.dept)
+      }))
+      
+      # Per ognuno di essi ora estrai cio' che c'e' nel mezzo (ed allinea il pminer.delta.date)
+      lst.inTheMiddle <- lapply(1:length(arr.IPP.to), function(counter) {
+        subMM <- objDL.out$pat.process[[arr.IPP.to[counter]]][  profondita.from:arr.depth[counter] ,   ]
+        subMM$pMineR.deltaDate <- subMM$pMineR.deltaDate - subMM$pMineR.deltaDate[1]
+        return(subMM)
+      })
+      names(lst.inTheMiddle) <- arr.IPP.to
+      lst.res[[ arr.from[i] ]] <- lst.inTheMiddle
+    }
+    return( lst.res )
+  }
+  
   #=================================================================================
   # constructor
   #=================================================================================  
@@ -1554,6 +1600,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     "plotNodeStats" = plotNodeStats,
     "plotCFGraphComparison" = plotCFGraphComparison,
     "pathBeetweenStackedNodes" = pathBeetweenStackedNodes,
-    "kaplanMeierCurves" = kaplanMeierCurves
+    "kaplanMeierCurves" = kaplanMeierCurves,
+    "selectSubCohorts" = selectSubCohorts
   ))
 }
