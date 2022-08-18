@@ -1580,7 +1580,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     id <- as.character(id)
     res <- findReacheableNodes.ll( id = id  )$subMM
     if( id %in% res[1,]) {
-      res <- res[ , -which( a[1,] == id )  ]
+      res <- res[ , -which( res[1,] == id )  ]
     }
     if(ncol(res)==0) res <- c()
     return(res)    
