@@ -1573,6 +1573,39 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   }
   
   #=================================================================================
+  # findReacheableNodes
+  #================================================================================= 
+  
+  findReacheableNodes <- function( id ) {
+    return( findReacheableNodes.ll( id = id ) )
+  }
+  findReacheableNodes.ll <- function( id, subMM = c() ) {
+    # casta a character, altrimenti non pesco l'indice ma la posizione 
+    id <- as.character(id)
+    
+    objCFM.DS <- getDataStructure()
+    
+    # Cerca se ci sono figli
+    notBlank <- which(objCFM.DS$MM[id,]!="")
+    # Se non ci sono, ritorna (sono in una foglia)
+    if( length(notBlank) == 0) {
+      n.pazienti <- length(objCFM.DS$lst.nodi[[id]]$IPP)
+      depth <- objCFM.DS$lst.nodi[[id]]$depth
+      subMM <- cbind( subMM , c(  id , n.pazienti , depth  ) )
+      return( subMM ) 
+    }
+    
+    # se sono qui e' perche' invece ci sono: loopa su ognuno di essi richiamando
+    # ricorsivamente la funzione.
+    arr.id.son <- colnames(objCFM.DS$MM)[notBlank]
+    for( id.son in arr.id.son ) {
+      subMM <- findReacheableNodes.ll( id = id.son, subMM = subMM  )
+    }
+    rownames(subMM) <- c("id","Npatients","depth")
+    return(subMM)
+  }  
+  
+  #=================================================================================
   # constructor
   #=================================================================================  
   
@@ -1601,6 +1634,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     "plotCFGraphComparison" = plotCFGraphComparison,
     "pathBeetweenStackedNodes" = pathBeetweenStackedNodes,
     "kaplanMeierCurves" = kaplanMeierCurves,
-    "selectSubCohorts" = selectSubCohorts
+    "selectSubCohorts" = selectSubCohorts,
+    "findReacheableNodes" = findReacheableNodes
   ))
 }
