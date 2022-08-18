@@ -1557,7 +1557,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
         # retituisci il primo, cronologicamente, fra i possibili
         quali.match <- matrix(quali.match[which(quali.match[,1] == 1),],ncol=2,byrow = T)
         best.dept <- quali.match[order(quali.match[,2],decreasing = FALSE),2]
-        return(best.dept)
+        return(max(best.dept))
       }))
       
       # Per ognuno di essi ora estrai cio' che c'e' nel mezzo (ed allinea il pminer.delta.date)
