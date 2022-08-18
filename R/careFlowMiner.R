@@ -1577,14 +1577,18 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   #================================================================================= 
   
   findReacheableNodes <- function( id ) {
-    return( findReacheableNodes.ll( id = id ) )
+    id <- as.character(id)
+    res <- findReacheableNodes.ll( id = id  )$subMM
+    if( id %in% res[1,]) {
+      res <- res[ , -which( a[1,] == id )  ]
+    }
+    if(ncol(res)==0) res <- c()
+    return(res)    
   }
   findReacheableNodes.ll <- function( id, subMM = c() ) {
-    # casta a character, altrimenti non pesco l'indice ma la posizione 
+    # casta a character, altrimenti non pesco l'indice ma la posizione
     id <- as.character(id)
-    
     objCFM.DS <- getDataStructure()
-    
     # Cerca se ci sono figli
     notBlank <- which(objCFM.DS$MM[id,]!="")
     # Se non ci sono, ritorna (sono in una foglia)
@@ -1592,17 +1596,23 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       n.pazienti <- length(objCFM.DS$lst.nodi[[id]]$IPP)
       depth <- objCFM.DS$lst.nodi[[id]]$depth
       subMM <- cbind( subMM , c(  id , n.pazienti , depth  ) )
-      return( subMM ) 
+      return( list("leaf"=TRUE, "subMM" = subMM) )
     }
     
     # se sono qui e' perche' invece ci sono: loopa su ognuno di essi richiamando
     # ricorsivamente la funzione.
     arr.id.son <- colnames(objCFM.DS$MM)[notBlank]
     for( id.son in arr.id.son ) {
-      subMM <- findReacheableNodes.ll( id = id.son, subMM = subMM  )
+      lst.res <- findReacheableNodes.ll( id = id.son, subMM = subMM  )
+      subMM <- lst.res$subMM
+      if( lst.res$leaf == FALSE ) {
+        n.pazienti <- length(objCFM.DS$lst.nodi[[id.son]]$IPP)
+        depth <- objCFM.DS$lst.nodi[[id.son]]$depth
+        subMM <- cbind( subMM , c(  id.son , n.pazienti , depth  ) )
+      }
     }
     rownames(subMM) <- c("id","Npatients","depth")
-    return(subMM)
+    return( list("leaf"=FALSE, "subMM" = subMM) )    
   }  
   
   #=================================================================================
