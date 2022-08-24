@@ -1616,6 +1616,89 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   }  
   
   #=================================================================================
+  # play
+  #=================================================================================   
+  play <- function( n ) {
+    BigMM <- c()
+    for( i in 1:n ) {
+      sumMM <- genTrace()
+      sumMM <- cbind( "ID"=rep(i,nrow(sumMM)) ,   sumMM )
+      BigMM <- rbind( BigMM , sumMM )
+    }
+    return( BigMM )
+  }
+  genTrace <- function( ) {
+    fine <- FALSE
+    i <- 0
+    MM <- matrix(0,nrow=0,ncol=2)
+    colnames(MM) <- c("date","event")
+    
+    while( fine == FALSE )  {
+      if( i == 0 ) {
+        riga <- getNextEvent()  
+      } else{
+        riga <- getNextEvent(ID = riga$ID , offsetDate = MM[nrow(MM),"date"])  
+      }
+      if( riga$end == TRUE ) return( MM )
+      MM <- rbind(MM , riga$row)
+      i <- i + 1
+    }
+  }
+  getNextEvent <- function( ID = "root", offsetDate = "" ) {
+    Struttura.Dati <- getDataStructure()
+    ID.possibiliFigli <- colnames(Struttura.Dati$MM)[which(Struttura.Dati$MM[ID,]!="")]
+    
+    if( length(ID.possibiliFigli) == 0 ) {
+      return( list("row" = c(), "end" = TRUE, "event" = NA , "ID" = NA) )
+    }
+    if( length(ID.possibiliFigli) == 1 ) {
+      winner.pos <- 1; 
+      winner.ID <- ID.possibiliFigli[ winner.pos ]
+      winner.event <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento    
+    }
+    if( length(ID.possibiliFigli) > 1 ) {
+      numIPP <- unlist(lapply( ID.possibiliFigli, function(IDFiglio){
+        return(Struttura.Dati$lst.nodi[[  as.character(IDFiglio) ]]$hits)
+      } ))
+      numIPP <- numIPP / Struttura.Dati$lst.nodi[[ID]]$hits
+      cumSum.numIPP <- cumsum(numIPP)
+      dado <- runif(n = 1,min = 0,max = 1)
+      winner.pos <- which(cumSum.numIPP - dado > 0)[1]
+      winner.ID <- ID.possibiliFigli[ winner.pos ]
+      winner.event <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento
+    }
+    
+    if( ID == "root")  {
+      startingDate <- sample(seq(as.Date('2021/01/01'), as.Date('2022/01/01'), by="day"), 1)
+      startingDate <- as.character(format(startingDate,"%d/%m%/%Y"))
+      startingDate <- paste(c(startingDate," 00:00:00"),collapse = '')
+    } else {
+      offsetDate <- str_trim(offsetDate)
+      if( str_length(offsetDate) == 10 )  offsetDate <- paste(c(offsetDate," 00:00:00"),collapse = '')
+      winner.IPP <- Struttura.Dati$lst.nodi[[ winner.ID ]]$IPP
+      date.from <- Struttura.Dati$lst.nodi[[ID]]$activationDates[  which(Struttura.Dati$lst.nodi[[ID]]$IPP  %in% winner.IPP )]
+      date.to <- Struttura.Dati$lst.nodi[[winner.ID]]$activationDates
+      arr.secs <- unlist(lapply( 1:length(date.to), function(cur) {
+        deltaSec <- as.numeric(strptime(  date.to[cur] , "%d/%m/%Y %H:%M:%S"   ) - strptime(  date.from[cur] , "%d/%m/%Y %H:%M:%S"   ),units="secs")
+        return(deltaSec)
+      }))
+      if( length(arr.secs) > 3 ) {
+        dens <- density(arr.secs)
+        newValue <- as.integer(sample(x = dens$x , 1, prob = dens$y) + rnorm(1,0,dens$bw ))
+      } else {
+        newValue <- mean(arr.secs)
+      }
+      startingDate <- substr(as.character(as.POSIXct( offsetDate , format =  "%d/%m/%Y %H:%M:%S" ) + newValue),1,19)
+      if( is.na(startingDate)) browser()
+      startingDate <- str_replace_all(string = startingDate, pattern = "-",replacement = "/")
+      startingDate <- paste(c(substr(startingDate,9,10),"/",substr(startingDate,6,7),"/",substr(startingDate,1,4)," ",substr(startingDate,12,19) ),collapse = '')
+    }
+    evento <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento
+    riga <- c(  "date" = startingDate, "event" = evento ) 
+    return( list("row" = riga, "end" = FALSE, "event" = winner.event , "ID" = winner.ID) )  
+  }
+  
+  #=================================================================================
   # constructor
   #=================================================================================  
   
@@ -1645,6 +1728,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     "pathBeetweenStackedNodes" = pathBeetweenStackedNodes,
     "kaplanMeierCurves" = kaplanMeierCurves,
     "selectSubCohorts" = selectSubCohorts,
-    "findReacheableNodes" = findReacheableNodes
+    "findReacheableNodes" = findReacheableNodes,
+    "play" = play
   ))
 }
