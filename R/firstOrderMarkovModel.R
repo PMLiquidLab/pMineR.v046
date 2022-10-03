@@ -295,13 +295,13 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
           possibleCandidate <- FALSE
         }
       }
-
+      
       if( length(withPatientID) > 0 ) {
         if( !(unique(x[,MM.csv.parameters$csv.IDName]) %in% withPatientID) ) {
           possibleCandidate <- FALSE
         } 
       }
-        
+      
       # qui ragionare su withPatientID
       if( TRUE %in% (PDVAt %in% eventsInPath) ) {
         event.censored <- 0
@@ -741,7 +741,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
               arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
             }
           }
-
+          
         }
       }
     }
