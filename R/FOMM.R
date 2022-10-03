@@ -1,9 +1,9 @@
 #' A class to train First Order Markov Models
 #' 
-#' @description  This is an implementation of the First Order Markov Model (firstOrderMarkovModel) for Process Mining issues.
+#' @description  This is an implementation of the First Order Markov Model (FOMM) for Process Mining issues.
 #'                This class provides a minimal set of methods to handle with the FOMM model:
 #'                \itemize{
-#'                \item \code{firstOrderMarkovModel( ) } is the costructor
+#'                \item \code{FOMM( ) } is the costructor
 #'                \item \code{loadDataset( ) } loads data taken from a dataLoader::getData() method, into a FOMM object
 #'                \item \code{trainModel( ) } train a model using the previously loaded dataset
 #'                \item \code{replay( ) } re-play a given event log on the internal FOMM model
@@ -24,7 +24,7 @@
 #' @param parameters.list a list containing the parameters. The possible ones are: 'considerAutoLoop' and 'threshold'. 'considerAutoLoop' is a boolean which indicates if the autoloops have to be admitted, while 'threshold' is the minimum value that a probability should have to do not be set to zero, in the transition matrix.
 #' @import progress DiagrammeR
 #' @export
-firstOrderMarkovModel<-function( parameters.list = list() ) {
+FOMM<-function( parameters.list = list() ) {
   MMatrix<-''
   footPrint<-''
   model.grViz<-'';
@@ -295,13 +295,13 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
           possibleCandidate <- FALSE
         }
       }
-      
+
       if( length(withPatientID) > 0 ) {
         if( !(unique(x[,MM.csv.parameters$csv.IDName]) %in% withPatientID) ) {
           possibleCandidate <- FALSE
         } 
       }
-      
+        
       # qui ragionare su withPatientID
       if( TRUE %in% (PDVAt %in% eventsInPath) ) {
         event.censored <- 0
@@ -741,7 +741,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
               arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
             }
           }
-          
+
         }
       }
     }
@@ -867,7 +867,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   #===========================================================    
   getClass<-function(){
     return(list(
-      "class"="firstOrderMarkovModel",
+      "class"="FOMM",
       "obj.ID"=global.personal.ID,
       "version"="0.44"      
     ))
@@ -903,7 +903,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     MM.csv.parameters<<-list()
     istanceClass<<-list()
     obj.log<<-logHandler();
-    setInstanceClass(className = "firstOrderMarkovModel")
+    setInstanceClass(className = "FOMM")
     global.personal.ID<<-paste( c(as.character(runif(1,1,100000)),as.character(runif(1,1,100000)),as.character(runif(1,1,100000))), collapse = '' )
   }
   #===========================================================
@@ -926,3 +926,5 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     "LogRankTest"=LogRankTest
   ) )  
 }
+
+  
