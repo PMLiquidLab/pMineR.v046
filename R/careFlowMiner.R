@@ -1291,7 +1291,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       }
     }
 
-    return( "KM0" = KM0, "to_ret" = to_ret )
+    return( list("KM0" = KM0, "to_ret" = to_ret) )
   }
   
   #=================================================================================
