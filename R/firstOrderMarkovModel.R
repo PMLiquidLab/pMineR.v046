@@ -332,8 +332,20 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     colnames(matrice.KM)<-c("ID","time","outcome")
     matrice.KM <- as.data.frame(matrice.KM)
     
-    matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
-    matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
+    if(is.factor(matrice.KM$time)) {
+      matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
+    } else {
+      matrice.KM$time <- as.numeric(matrice.KM$time)
+    }
+
+    if(is.factor(matrice.KM$outcome)) {
+      matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
+    } else {
+      matrice.KM$outcome <- as.numeric(matrice.KM$outcome)
+    }
+    
+    # matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
+    # matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
     
     if( UM == "days") matrice.KM$time <- matrice.KM$time / 1440
     if( UM == "hours") matrice.KM$time <- matrice.KM$time / 60
