@@ -588,12 +588,16 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         note.setEvent(eventType = ev.NOW, eventDate = data.ev.NOW )
       }
       note.set.st.ACTIVE.PRE(array.st.ACTIVE.PRE = st.ACTIVE)
+      # browser()
+      
+      if( debug == TRUE) cat("\n\t: ev.NOW=",ev.NOW)
       # Cerca chi ha soddisfatto le precondizioni
       newHop <- attiva.trigger( st.LAST = st.LAST, ev.NOW = ev.NOW, st.DONE = st.DONE,
                                 st.ACTIVE = st.ACTIVE, st.ACTIVE.time = st.ACTIVE.time,
                                 st.ACTIVE.time.cum = st.ACTIVE.time.cum,
                                 EOF = FALSE  , UM = UM, debug = debug,
                                 riga.completa.EventLog = riga.completa.EventLog )
+      # browser()
       history.hop[[indice.di.sequenza.ch]]$active.trigger<-newHop$active.trigger
       history.hop[[indice.di.sequenza.ch]]$ev.NOW<-ev.NOW
       history.hop[[indice.di.sequenza.ch]]$st.ACTIVE<-newHop$st.ACTIVE
@@ -642,12 +646,15 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         stati.da.resettare <- lista.stati.possibili[ !(lista.stati.possibili %in% stati.da.uppgradare) ]
         st.ACTIVE.time [ stati.da.resettare ] <- 0
 
+        # browser()
+        if( debug == TRUE) cat("\n\t: ev.NOW=''")        
         # Verifica se c'e' un trigger
         newHop <- attiva.trigger( st.LAST = st.LAST, ev.NOW = "", st.DONE = st.DONE,
                                   st.ACTIVE = st.ACTIVE, st.ACTIVE.time = st.ACTIVE.time,
                                   st.ACTIVE.time.cum = st.ACTIVE.time.cum,
                                   EOF = FALSE  , UM = UM, debug = debug,
                                   riga.completa.EventLog = c())
+        # browser()
         # inzializza il log in caso di errore o in caso di trigger
         if(newHop$error==TRUE | length(newHop$active.trigger)!=0) {
           ct <- ct + 1
@@ -709,7 +716,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         break;
       }
     }
-
+# browser()
+    if( debug == TRUE) cat("\n\t: ev.NOW=EOF")     
     # Se la computazione non e', per qualche motivo, interrotta
     if( stop.computation == FALSE  & sum(arr.nodi.end %in% st.ACTIVE) == 0) {
       # Now process the EOF !!
@@ -794,13 +802,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
     # Frulla per ogni possibile trigger, verificando se si puo' attivare
     for( trigger.name in names(WF.struct[[ "info" ]][[ "trigger" ]]) ) {
-# browser()
+      
+      if( debug == TRUE) cat("\n\t\t: trigger=",trigger.name)  
       # if( trigger.name == "Localization high?" & ev.NOW=="Site_localization" ) browser() 
       # Prendi la condizione
       precondizione <- WF.struct[["info"]][["trigger"]][[trigger.name]]$condition
       stringa.to.eval<-precondizione
       
-      if(debug == TRUE) cat("\n\t condition: ",stringa.to.eval)
+      if(debug == TRUE) cat("\n\t\t: condition: ",stringa.to.eval)
 
       # Agisci solo nel caso in cui una CONDITION sia stata definita,
       # per quel trigger (alcuni trigger potrebbero NON avere una CONDITION)
@@ -848,6 +857,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
           # Parsa la stringa
           if(stringa.to.eval=="") risultato <- TRUE
           else risultato <- eval(expr = parse(text = stringa.to.eval))
+          
+          if(debug == TRUE) cat("\n\t\t: condition: ",stringa.to.eval)
+          if(debug == TRUE) cat("\n\t\t: risultato: ",risultato)          
+          
         }
 
         # Se previsto, aggiorna la cache! ---------------------------------------------
@@ -862,6 +875,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
 
         # Se la condizione e' soddisfatta, aggiorna le variabili
+        if(is.na(risultato)) risultato <- FALSE
         if( risultato == TRUE ) {
           # prendi la priorita'
           pri <- WF.struct[["info"]][["trigger"]][[trigger.name]]$pri
@@ -893,6 +907,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
       }
     }
+    # if(debug == TRUE) {
+    #   cat(tabella.set.unset)
+    # }
 # browser()
     # Se esista la tabella, verifica i conflitti di set/unset
     if(!is.null(tabella.set.unset)) {
@@ -909,6 +926,13 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       errore <- res$errore
     }
 
+    if(debug == TRUE) cat("\n--------------------------------------------")
+    if(debug == TRUE) cat("\n\t\t: nuovi stati ACTIVE: ",new.st.ACTIVE)
+    if(debug == TRUE) cat("\n\t\t: nuovi stati LAST: ",new.st.LAST)
+    if(debug == TRUE) cat("\n\t\t: nuovi stati DONE: ",new.st.DONE) 
+    if(debug == TRUE) cat("\n\t\t: trigger attivati: ",active.trigger) 
+    if(debug == TRUE) cat("\n--------------------------------------------")
+    
     # Ritorna i nuovi stati e la lista dei trigger attivati
     return(list(
       "st.ACTIVE"=new.st.ACTIVE,      # lista nuovi stati ACTIVE
