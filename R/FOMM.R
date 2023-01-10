@@ -1,5 +1,5 @@
 #' A class to train First Order Markov Models
-#' 
+#'
 #' @description  This is an implementation of the First Order Markov Model (FOMM) for Process Mining issues.
 #'                This class provides a minimal set of methods to handle with the FOMM model:
 #'                \itemize{
@@ -18,56 +18,59 @@
 #'                \item \code{findReacheableNodes( ) } and return the array containing the reacheable states, starting from the passed one.
 #'                }
 #'              In order to better undestand the use of such methods, please visit: www.pminer.info
-#'              
+#'
 #'              The consturctor admit the following parameters:
-#' parameters.list a list containing possible parameters to tune the model. 
+#' parameters.list a list containing possible parameters to tune the model.
 #' @param parameters.list a list containing the parameters. The possible ones are: 'considerAutoLoop' and 'threshold'. 'considerAutoLoop' is a boolean which indicates if the autoloops have to be admitted, while 'threshold' is the minimum value that a probability should have to do not be set to zero, in the transition matrix.
 #' @import progress DiagrammeR
+#' @import survival
 #' @export
-FOMM<-function( parameters.list = list() ) {
+FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   MMatrix<-''
   footPrint<-''
   model.grViz<-'';
-  is.dataLoaded<-FALSE  
+  is.dataLoaded<-FALSE
   parameters<-list()
   MMatrix.perc<-NA
   MMatrix.perc.noLoop<-NA
   MMatrix.mean.time<-NA
-  MMatrix.density.list<-NA  
+  MMatrix.density.list<-NA
   MM.den.list.high.det <- NA
   MM.pat.process<-NA
   MM.csv.parameters <- NA
   istanceClass<-list()
   obj.log<-NA
   global.personal.ID<-NA
-  
+  param.verbose<-''
+
+
   # ***************************************************************************************************
   # WRAPPING METHODS
   # ***************************************************************************************************
   #===========================================================
   # loadDataset
-  #===========================================================  
-  loadDataset<-function( dataList ) { 
-    
+  #===========================================================
+  loadDataset<-function( dataList ) {
+
     transMatrix<-dataList$MMatrix
     MMatrix<<-transMatrix
-    
+
     # calcola la matrice delle percentuali e quella delle percentuali senza i loop
     MM<-MMatrix;
-    for( i in seq( 1 , nrow(MM)) ) {if(sum(MM[i,])>0)  {MM[i,]<-MM[i,]/sum(MM[i,]);} } 
+    for( i in seq( 1 , nrow(MM)) ) {if(sum(MM[i,])>0)  {MM[i,]<-MM[i,]/sum(MM[i,]);} }
     MMatrix.perc<<-MM
-    
+
     MM<-MMatrix;
     diag(MM)<-0;
-    for( i in seq( 1 , nrow(MM)) ) {if(sum(MM[i,])>0)  {MM[i,]<-MM[i,]/sum(MM[i,]);} } 
-    MMatrix.perc.noLoop<<-MM     
-    
+    for( i in seq( 1 , nrow(MM)) ) {if(sum(MM[i,])>0)  {MM[i,]<-MM[i,]/sum(MM[i,]);} }
+    MMatrix.perc.noLoop<<-MM
+
     MMatrix.mean.time<<-dataList$MM.mean.time
     MMatrix.density.list<<-dataList$MM.density.list
     MM.den.list.high.det<<- dataList$MM.den.list.high.det
-    
+
     MM.pat.process  <<- dataList$pat.process
-    
+
     MM.csv.parameters<<-list()
     MM.csv.parameters$csv.column.names <<- dataList$csv.column.names
     MM.csv.parameters$csv.IDName <<- dataList$csv.IDName
@@ -75,10 +78,11 @@ FOMM<-function( parameters.list = list() ) {
     MM.csv.parameters$csv.dateColumnName <<- dataList$csv.dateColumnName
     MM.csv.parameters$csv.date.format <<- dataList$csv.date.format
     MM.csv.parameters$csv.max.pMineR.internal.ID.Evt <<- dataList$csv.max.pMineR.internal.ID.Evt
-    
+
+
     # dichiara che i dati sono stati caricati
     is.dataLoaded<<-TRUE
-  }  
+  }
   #===========================================================
   # play
   #===========================================================
@@ -92,32 +96,32 @@ FOMM<-function( parameters.list = list() ) {
     for(i in seq(1,numberOfPlays)) {
       chiave <- as.character(i)
       res[[chiave]]<-play.Single()
-      
+
       # costruisci le parole
       tempo[[chiave]]<-c(0)
       data.ora.tm2 <- as.POSIXct("01/01/2000 00:00:01", format = "%d/%m/%Y %H:%M:%S")
       data.ora[[chiave]] <- c( as.character(data.ora.tm2)  )
-      
+
       if(length(res[[chiave]])>=2) {
         for( contatore in seq(1,length(res[[chiave]])-1 ) ) {
           ppp <- MM.den.list.high.det[[ res[[chiave]][contatore] ]][[ res[[chiave]][contatore+1] ]]
-          
-          if( length(ppp)==1)  {  
+
+          if( length(ppp)==1)  {
             deltaMinuti <- ppp
             tempo[[chiave]]  <- c(tempo[[chiave]],deltaMinuti)
             data.ora.tm2 <- data.ora.tm2 + 60 * deltaMinuti
             if(is.na(data.ora.tm2)) browser()
-            data.ora[[chiave]] <- c(data.ora[[chiave]],as.character(data.ora.tm2))            
+            data.ora[[chiave]] <- c(data.ora[[chiave]],as.character(data.ora.tm2))
           }
           else {
             min.cum.sum = cumsum(density(ppp)$y)
             # Normalizza a 1
-            min.cum.sum <- min.cum.sum / max(min.cum.sum) 
+            min.cum.sum <- min.cum.sum / max(min.cum.sum)
             dado.lanciato <- runif(n = 1,min = min(min.cum.sum+0.001),max = .95)
-            
+
             deltaMinuti <- max(density(ppp)$x[( min.cum.sum<dado.lanciato )])
             deltaMinuti <- max(0,deltaMinuti)
-            
+
             tempo[[chiave]] <- c(tempo[[chiave]],deltaMinuti)
             data.ora.tm2 <- data.ora.tm2 + 60 * deltaMinuti
             if(is.na(data.ora.tm2)) browser()
@@ -126,22 +130,22 @@ FOMM<-function( parameters.list = list() ) {
         }
       }
     }
-    
+
     # Se devi generare alcune sequenze invalida, provvedi
     arr.quanti.invalidi <- c()
     if(!is.na(min.num.of.valid.words)) {
-      
+
       sequenze.da.invalidare <- numberOfPlays - min.num.of.valid.words
       if(sequenze.da.invalidare>0) {
-        
+
         sottomatrice <- MMatrix[ !(colnames(MMatrix) %in% c("BEGIN","END")), !(rownames(MMatrix) %in% c("BEGIN","END"))  ]
         posizione.zeri <- which(sottomatrice==0,arr.ind = TRUE)
-        
+
         for( i in seq(1,sequenze.da.invalidare))  {
           if( length(res[[i]])>1 ) {
             dado.innesto <- as.integer(runif(1,min=1,max =length(res[[i]])))
             dato.righe.matrice <- as.integer(runif(1,min=1,max = nrow(posizione.zeri)))
-            res[[i]][dado.innesto] <- rownames(sottomatrice)[posizione.zeri[ dato.righe.matrice,1 ]]  
+            res[[i]][dado.innesto] <- rownames(sottomatrice)[posizione.zeri[ dato.righe.matrice,1 ]]
             res[[i]][dado.innesto+1] <- colnames(sottomatrice)[ posizione.zeri[ dato.righe.matrice,2 ]]
           }
           arr.quanti.invalidi<-c(arr.quanti.invalidi,rep(FALSE,length(res[[i]])))
@@ -149,13 +153,13 @@ FOMM<-function( parameters.list = list() ) {
       }
     }
     if(length(res) == 0 ) { cat("\n WARNING: no sequences generated...."); return(); }
-    res <- local.format.data.for.csv(listaProcessi = res, 
+    res <- local.format.data.for.csv(listaProcessi = res,
                                      lista.validi = rep(TRUE,numberOfPlays),
                                      data.ora = data.ora)
-    
+
     if(length(arr.quanti.invalidi)>=0 & !is.null(arr.quanti.invalidi)) res[,"valido"][1:length(arr.quanti.invalidi)]<-arr.quanti.invalidi
-    
-    
+
+
     if(!is.null(dim(res))) res<-as.data.frame(res)
     if(toReturn=="csv") { daRestituire <- res  }
     if(toReturn=="dataLoader"){
@@ -163,16 +167,16 @@ FOMM<-function( parameters.list = list() ) {
       daRestituire<-dataLoader()
       daRestituire$load.data.frame(mydata = res,
                                    IDName = "patID",EVENTName = "event",
-                                   dateColumnName = "date",format.column.date = "%Y-%m-%d %H:%M:%S")      
+                                   dateColumnName = "date",format.column.date = "%Y-%m-%d %H:%M:%S")
     }
     return(daRestituire)
-  }  
-  
+  }
+
   local.format.data.for.csv<-function(listaProcessi, lista.validi,
-                                      data.ora = data.ora, typeOfRandomDataGenerator="") { 
+                                      data.ora = data.ora, typeOfRandomDataGenerator="") {
     big.csv<-c()
     ct <- 1
-    
+
     for(posizione in seq(1,length(listaProcessi))) {
       i <- names(listaProcessi)[posizione]
       numeroElementi<-length(listaProcessi[[i]])
@@ -185,18 +189,18 @@ FOMM<-function( parameters.list = list() ) {
       colnames(big.csv)<-c("patID","event","date","valido")
     }
     return(big.csv)
-  }  
+  }
   #=================================================================================
   # distanceFrom - WRAPPER Function
   # Funzione WRAPPER per il calcolo delle distanze rispetto ad un oggetto omologo
-  #=================================================================================   
+  #=================================================================================
   distanceFrom<-function( objToCheck, metric="default") {
-    
+
     if( metric == "default" ) return( distanceFrom.default( objToCheck = objToCheck) )
     if( metric == "binaryCount" ) return( distanceFrom.binaryCount( objToCheck = objToCheck) )
-    
+
     obj.log$sendLog(msg= "The requested metric is not yet available" , type="NMI" )
-  }  
+  }
   #===========================================================
   # trainModel
   #===========================================================
@@ -206,13 +210,13 @@ FOMM<-function( parameters.list = list() ) {
     else threshold<-0
     if(!is.null(parameters$considerAutoLoop)) {
       considerAutoLoop<-parameters$considerAutoLoop
-    } 
-    else 
+    }
+    else
     {
       considerAutoLoop<-TRUE
     }
     if(debug.mode==TRUE) browser()
-    # copia la tabella delle  transizioni in una un po' piu' facile 
+    # copia la tabella delle  transizioni in una un po' piu' facile
     # da maneggiare (almeno come nome)
     if ( considerAutoLoop == TRUE) { MM<-MMatrix.perc; }
     else {
@@ -221,25 +225,25 @@ FOMM<-function( parameters.list = list() ) {
       diag(MMatrix.perc)<<-0
       MM <- MMatrix.perc.noLoop
     }
-    # sistema la threshold 
+    # sistema la threshold
     # browser()
     aa<- MMatrix.perc; bb <- MMatrix
     bb[ which(aa<=threshold,arr.ind = T) ]<-0
     aa[ which(aa<=threshold,arr.ind = T) ]<-0
-    for( i in seq( 1 , nrow(aa)) ) {if(sum(aa[i,])>0)  {aa[i,]<-aa[i,]/sum(aa[i,]);} } 
+    for( i in seq( 1 , nrow(aa)) ) {if(sum(aa[i,])>0)  {aa[i,]<-aa[i,]/sum(aa[i,]);} }
     MMatrix.perc<<-aa ; MMatrix<<-bb
     grafo<-build.graph.from.table( MM = MMatrix.perc, threshold  = threshold)
-    
+
     model.grViz<<-grafo;
   }
   #===========================================================
   # KaplanMeier
   #===========================================================
-  KaplanMeier<-function( fromState, toState, 
-                         passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
+  KaplanMeier<-function( fromState, toState,
+                         passingThrough=c(), passingNotThrough=c(), stoppingAt=c(),
                          stoppingNotAt=c(), PDVAt=c(), withPatientID=c() , UM="mins" )  {
-    
-    
+
+
     res <- lapply( MM.pat.process , function(x)  {
       wrklst <- list()
       wrklst$inPath <- FALSE
@@ -247,9 +251,9 @@ FOMM<-function( parameters.list = list() ) {
       wrklst$toRow <- NA
       eventsInPath <- c()
       # browser()
-      # Riproduci il calcolo, fra gli stati 'from' e 'to' 
+      # Riproduci il calcolo, fra gli stati 'from' e 'to'
       for(riga in seq(1,nrow(x))) {
-        
+
         # trigger the begin
         if( x[ riga , MM.csv.parameters[["csv.EVENTName"]] ] == fromState & is.na(wrklst$fromRow) ) {
           wrklst$inPath <-TRUE
@@ -267,11 +271,11 @@ FOMM<-function( parameters.list = list() ) {
           if(wrklst$inPath == TRUE ) {
             wrklst$inPath <- FALSE
             wrklst$toRow <- riga
-            eventsInPath <- c( eventsInPath ,  x[ riga , MM.csv.parameters[["csv.EVENTName"]] ] )  
+            eventsInPath <- c( eventsInPath ,  x[ riga , MM.csv.parameters[["csv.EVENTName"]] ] )
           }
-        }                
+        }
         if(wrklst$inPath == TRUE) {
-          eventsInPath <- c( eventsInPath ,  x[ riga , MM.csv.parameters[["csv.EVENTName"]] ] )  
+          eventsInPath <- c( eventsInPath ,  x[ riga , MM.csv.parameters[["csv.EVENTName"]] ] )
         }
       }
       # ora verifica se le transizioni soddisfano le condizioni dei parametri in ingresso
@@ -287,7 +291,7 @@ FOMM<-function( parameters.list = list() ) {
         }
         if( TRUE %in% (passingNotThrough %in% eventsInPath) & length(passingNotThrough)>0 ) {
           possibleCandidate <- FALSE
-        }    
+        }
         if( FALSE %in% (ultimoStato %in% stoppingAt) & length(stoppingAt)>0 ) {
           possibleCandidate <- FALSE
         }
@@ -299,26 +303,26 @@ FOMM<-function( parameters.list = list() ) {
       if( length(withPatientID) > 0 ) {
         if( !(unique(x[,MM.csv.parameters$csv.IDName]) %in% withPatientID) ) {
           possibleCandidate <- FALSE
-        } 
+        }
       }
-        
+
       # qui ragionare su withPatientID
       if( TRUE %in% (PDVAt %in% eventsInPath) ) {
         event.censored <- 0
       } else {
         event.censored <- 1
       }
-      
+
       deltaT<-NA
       if( !is.na(wrklst$fromRow) & !is.na(wrklst$toRow) ) {
         deltaT <- x[ wrklst$toRow, "pMineR.deltaDate" ] - x[ wrklst$fromRow, "pMineR.deltaDate" ]
       }
-      
+
       lista.res <- list( "eligible" = possibleCandidate,
                          "event.censored" = event.censored,
                          "deltaT" = deltaT,
                          "arr.evt" = eventsInPath,
-                         "error" = 0) 
+                         "error" = 0)
       return(lista.res)
     })
     # browser()
@@ -328,37 +332,58 @@ FOMM<-function( parameters.list = list() ) {
         matrice.KM <- rbind( matrice.KM, c(ID, res[[ID]]$deltaT, res[[ID]]$event.censored ))
       }
     }
+
+    if(!is.null(matrice.KM)){
+      colnames(matrice.KM)<-c("ID","time","outcome")
+      matrice.KM <- as.data.frame(matrice.KM)
+      if(is.factor(matrice.KM$time)){
+        matrice.KM$time<- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
+      }else{
+        matrice.KM$time<-as.numeric(matrice.KM$time)
+      }
+
+      if(is.factor(matrice.KM$outcome)){
+        matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
+      }else{
+        matrice.KM$outcome <- as.numeric(matrice.KM$outcome)
+      }
+
+      # matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
+      # matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
+
+      if( UM == "days") matrice.KM$time <- matrice.KM$time / 1440
+      if( UM == "hours") matrice.KM$time <- matrice.KM$time / 60
+      if( UM == "weeks") matrice.KM$time <- matrice.KM$time / (1440 * 7)
+      if( UM == "months") matrice.KM$time <- matrice.KM$time / (43800)
+
+
+      KM0 <- survfit(Surv(time, outcome)~1,   data=matrice.KM)
+      error.mess<-"0: successful"
+    }else{
+      KM0<-NULL
+      error.mess<-"1: No matches for the specified path"
+    }
     # browser()
-    colnames(matrice.KM)<-c("ID","time","outcome")
-    matrice.KM <- as.data.frame(matrice.KM)
-    
-    matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
-    matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
-    
-    if( UM == "days") matrice.KM$time <- matrice.KM$time / 1440
-    if( UM == "hours") matrice.KM$time <- matrice.KM$time / 60
-    if( UM == "weeks") matrice.KM$time <- matrice.KM$time / (1440 * 7)
-    if( UM == "months") matrice.KM$time <- matrice.KM$time / (43800)
-    
-    
-    KM0 <- survfit(Surv(time, outcome)~1,   data=matrice.KM)
-    
-    return( list("table"=matrice.KM, "KM"=KM0, "ID"=matrice.KM$ID, "error"=0 ) )
-    
+
+
+
+
+    return( list("table"=matrice.KM, "KM"=KM0, "ID"=matrice.KM$ID, "error"=error.mess ) )
+
   }
   replay<-function( dataList ,  col.toCheckPerformances=NA ) {
     res<-list()
     res$words<-list()
     res$success<-c()
     declared.correctness<- c()
-    
+
     if( !is.na(col.toCheckPerformances) )  {
       if( !(col.toCheckPerformances %in% colnames(dataList$pat.process[[1]])) ) {
         obj.log$sendLog( msg = c("The indicated column name (in 'col.toCheckPerformances') does not exist in the dataset!")  ,type="ERR");
         return();
       }
     }
-    
+
     for(patId in names(dataList$pat.process)) {
       parola <- unlist(dataList$pat.process[[patId]][[dataList$csv.EVENTName]])
       parola <- c("BEGIN",parola)
@@ -368,7 +393,7 @@ FOMM<-function( parameters.list = list() ) {
         caratt.s <- parola[ caratt.i  ]
         if(!(caratt.s %in% colnames(MMatrix.perc))) { success = FALSE; break; }
         if(!(parola[ caratt.i +1 ] %in% colnames(MMatrix.perc))) { success = FALSE; break; }
-        
+
         jump.prob <- MMatrix.perc[ parola[ caratt.i  ], parola[ caratt.i+1 ]  ]
         if(jump.prob>0) path.attuale <- c(path.attuale,parola[ caratt.i  ])
         if(jump.prob==0) { success = FALSE; break; }
@@ -376,12 +401,12 @@ FOMM<-function( parameters.list = list() ) {
       }
       res$words[[patId]]<-path.attuale
       res$success<-c(res$success,success)
-      
+
       if( !is.na(col.toCheckPerformances) )  {
         declared.correctness <- c(declared.correctness,as.character(dataList$pat.process[[patId]][[col.toCheckPerformances]][1]))
       }
     }
-    
+
     if( !is.na(col.toCheckPerformances) ) {
       conf.matrix <- table(res$success, declared.correctness)
       res$performances <- calculate.performances(conf.matrix)
@@ -389,7 +414,7 @@ FOMM<-function( parameters.list = list() ) {
     return( res )
   }
   #===========================================================
-  # calculate.performances 
+  # calculate.performances
   #===========================================================
   calculate.performances<-function( conf.matrix  ) {
     # calculate accuracy
@@ -404,8 +429,8 @@ FOMM<-function( parameters.list = list() ) {
     } else { FP <- 0 }
     if( "FALSE" %in% rownames(conf.matrix) & "TRUE" %in% colnames(conf.matrix)) {
       FN <- conf.matrix[ "FALSE","TRUE" ]
-    } else { FN <- 0 }  
-    
+    } else { FN <- 0 }
+
     return(list(
       "TP" = TP,
       "TN" = TN,
@@ -419,34 +444,34 @@ FOMM<-function( parameters.list = list() ) {
       "F1score" = ( 2 * TP )/( 2 * TP + FP + FN ),
       "conf.matrix"=conf.matrix
     ))
-  } 
+  }
   #===========================================================
   # findReacheableNodes
-  # Funzione 
+  # Funzione
   #===========================================================
   findReacheableNodes<-function( nodoDiPatenza = 'BEGIN'  ) {
     findReacheableNodes.recursiveLoop(
       nodoAttuale = nodoDiPatenza,
       nodi.raggiunti = c(nodoDiPatenza)
     )
-  }   
+  }
   findReacheableNodes.recursiveLoop<-function( nodoAttuale , nodi.raggiunti  ) {
     lista.nodi <- colnames(MMatrix.perc)
     nodi.raggiunti <- unique(c(nodi.raggiunti,nodoAttuale))
     for( nodoDestinazione in lista.nodi) {
       if( !(nodoDestinazione %in% nodi.raggiunti ) & MMatrix.perc[nodoAttuale,nodoDestinazione]>0) {
-        aa <- findReacheableNodes.recursiveLoop( nodoAttuale = nodoDestinazione , 
+        aa <- findReacheableNodes.recursiveLoop( nodoAttuale = nodoDestinazione ,
                                                  nodi.raggiunti = nodi.raggiunti)
         nodi.raggiunti <- unique(c(nodi.raggiunti , aa))
       }
     }
     return(nodi.raggiunti)
-  }   
+  }
   #===========================================================
   # convert2XML - future
   #===========================================================
   convert2XML<-function(  ) {
-  }   
+  }
   #===========================================================
   # getModel
   #===========================================================
@@ -454,7 +479,7 @@ FOMM<-function( parameters.list = list() ) {
     if(kindOfOutput=="grViz") return( model.grViz )
     if(kindOfOutput=="MMatrix") return( MMatrix )
     if(kindOfOutput=="MMatrix.perc") return( MMatrix.perc )
-    
+
     obj.log$sendLog( msg = c("The requested model is not available yet! Only 'grViz', 'MMatrix' and 'MMatrix.perc' are admitted. ")  ,type="ERR");
   }
   #===========================================================
@@ -462,12 +487,12 @@ FOMM<-function( parameters.list = list() ) {
   #===========================================================
   plot<-function(  plotIt = TRUE, giveItBack = FALSE ){
     if( plotIt == TRUE ) {
-      grViz( getModel(kindOfOutput = "grViz" ) )  
+      grViz( getModel(kindOfOutput = "grViz" ) )
     }
     if( giveItBack == TRUE ) {
       return(  getModel(kindOfOutput = "grViz" ) )
     }
-  }  
+  }
   #===========================================================
   # setIstanceClass
   #===========================================================
@@ -479,48 +504,48 @@ FOMM<-function( parameters.list = list() ) {
   #===========================================================
   getInstanceClass<-function( className, classType = "default") {
     return(istanceClass[[classType]])
-  }  
+  }
   # ***************************************************************************************************
   # MODEL SPECIFIC PUBLIC METHODS
-  # ***************************************************************************************************   
+  # ***************************************************************************************************
   #===========================================================
   # plot.delta.graph
   # Funzione per il plotting delle distanze rispetto ad una data metrica
   #===========================================================
-  plot.delta.graph<-function( objToCheck, threshold=0, type.of.graph="overlapped", 
-                              threshold.4.overlapped=.3 ,giveBackGrViz = FALSE, 
+  plot.delta.graph<-function( objToCheck, threshold=0, type.of.graph="overlapped",
+                              threshold.4.overlapped=.3 ,giveBackGrViz = FALSE,
                               plotIt = TRUE, returnDeltaMatrix = FALSE, layout = "dot", rankDirLR = FALSE) {
-    
+
     if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
     ext.MM <- objToCheck$getModel(kindOfOutput = "MMatrix.perc")
-    int.MM <- MMatrix.perc    
-    
+    int.MM <- MMatrix.perc
+
     combinazioni<-calcolaMatriceCombinazioni( ext.MM = ext.MM, int.MM = int.MM)
     listaStati<-unique(combinazioni[,1])
     matrice<-array(0,dim=c(length(listaStati),length(listaStati)))
-    m.int<-matrice; m.ext<-matrice;  
+    m.int<-matrice; m.ext<-matrice;
     colnames(matrice)<-listaStati;     rownames(matrice)<-listaStati
     colnames(m.int)<-listaStati;     rownames(m.int)<-listaStati
-    colnames(m.ext)<-listaStati;     rownames(m.ext)<-listaStati  
-    
+    colnames(m.ext)<-listaStati;     rownames(m.ext)<-listaStati
+
     for(riga in seq(1,nrow(combinazioni))) {
       matrice[  combinazioni[riga,"from"] , combinazioni[riga,"to"]   ]<- abs(combinazioni[riga,"int"] - combinazioni[riga,"ext"])
       m.int[  combinazioni[riga,"from"] , combinazioni[riga,"to"]   ]<- combinazioni[riga,"int"]
       m.ext[  combinazioni[riga,"from"] , combinazioni[riga,"to"]   ]<- combinazioni[riga,"ext"]
       #      if( matrice[  combinazioni[riga,"from"] , combinazioni[riga,"to"]   ] <threshold) matrice[  combinazioni[riga,"from"] , combinazioni[riga,"to"]   ]<-0
     }
-    
+
     if(type.of.graph=="delta")
-      grafo<-build.graph.from.table(MM = matrice, threshold = threshold, layout = layout , rankDirLR = rankDirLR) 
+      grafo<-build.graph.from.table(MM = matrice, threshold = threshold, layout = layout , rankDirLR = rankDirLR)
     if(type.of.graph=="overlapped")
-      grafo<-build.graph.from.table(MM = m.int, threshold = threshold, 
-                                    second.MM = m.ext, 
-                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph, layout = layout, rankDirLR = rankDirLR) 
-    
+      grafo<-build.graph.from.table(MM = m.int, threshold = threshold,
+                                    second.MM = m.ext,
+                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph, layout = layout, rankDirLR = rankDirLR)
+
     if(plotIt==TRUE)   grViz(grafo);
     if(returnDeltaMatrix==TRUE) return( list("matrix"=matrice,"m.int"=m.int,"m.ext"=m.ext) );
     if(giveBackGrViz == TRUE) return(grafo);
-  }   
+  }
   #=================================================================================
   # get.time.transition.Prob
   # It tries to predict the probability to reach a final state (starting from a known starting state)
@@ -530,28 +555,28 @@ FOMM<-function( parameters.list = list() ) {
   #   num.of.transitions : the max number of allowed days for reaching the final state
   #   debugString : (TRUE/FALSE) is a debug string print for debuggin issues
   #   killAutoLoop : (TRUE/FALSE) suppress autoloop during computation?
-  #=================================================================================    
+  #=================================================================================
   get.time.transition.Prob<-function( initialState, finalState, maxTime,debugString=NA,killAutoLoop=FALSE){
-    a<-getTimeProb( timeAttuale=0, maxTime =maxTime, 
-                    statoAttuale=initialState, statoGoal =finalState, 
+    a<-getTimeProb( timeAttuale=0, maxTime =maxTime,
+                    statoAttuale=initialState, statoGoal =finalState,
                     debugString=debugString,killAutoLoop=killAutoLoop, comsumedTime=0)
     return(a)
-  }   
+  }
   getTimeProb<-function( timeAttuale=0, maxTime =1, statoAttuale="BEGIN", statoGoal ="END", debugString=NA,killAutoLoop=FALSE,comsumedTime=0) {
     if(is.na(debugString)) debugString<-statoAttuale;
-    
+
     if( statoAttuale==statoGoal ) {
       cat('\n ',debugString);
       return( 1 );
-    }  
-    
+    }
+
     if( timeAttuale > maxTime & (statoAttuale!=statoGoal) ) {
       return( 1 );
-    }  
+    }
     if( killAutoLoop == FALSE ) { MMPerc<-MMatrix.mean.time; MMProb<-MMatrix.perc }
     if( killAutoLoop == TRUE ) { stop("Not yet implemented err.cod -hg85h78g4578") }
-    prob<-0; 
-    
+    prob<-0;
+
     for( possibileNuovoStato in rownames(MMPerc)) {
       giorni.stimati.per.transizione<-MMPerc[statoAttuale,possibileNuovoStato]
       if(giorni.stimati.per.transizione<1) giorni.stimati.per.transizione=1
@@ -560,13 +585,13 @@ FOMM<-function( parameters.list = list() ) {
         addendo<-MMProb[statoAttuale,possibileNuovoStato] * getTimeProb( timeAttuale+giorni.stimati.per.transizione, maxTime,  possibileNuovoStato ,  statoGoal , debugString = newdebugString, killAutoLoop=killAutoLoop);
         prob<-prob + addendo
       }
-    }  
+    }
     return(prob);
-  }    
+  }
   #=================================================================================
   # build.PWF
   # IT builds a Pseudo-Workflow XML file
-  #=================================================================================  
+  #=================================================================================
   build.PWF<-function() {
     testo <- "<xml>"
     testo <- str_c(testo,"\n\t<workflow>")
@@ -575,15 +600,15 @@ FOMM<-function( parameters.list = list() ) {
     for( i in nomeNodi ) {
       if(i != "END")
         testo <- str_c(testo,"\n\t<node name='",i,"' />")
-      else 
+      else
         testo <- str_c(testo,"\n\t<node name='END' type='END' />")
     }
     # Ora i trigger
     for(from.node in rownames(MMatrix)) {
       for(to.node in colnames(MMatrix)) {
-        # Se e' diverso da zero e, soprautto, se non si tratta dello stesso nodo 
+        # Se e' diverso da zero e, soprautto, se non si tratta dello stesso nodo
         # (senno' mi trovero' un SET ed un UNSET sullo stesso nodo con conseguente errore
-        # a runtime per ambiguita')        
+        # a runtime per ambiguita')
         if(MMatrix[from.node,to.node] >0 & from.node!=to.node) {
           testo <- str_c(testo, "\n\t <trigger name='from.",from.node,".to.",to.node,"'>")
           testo <- str_c(testo, "\n\t\t <condition>")
@@ -597,7 +622,7 @@ FOMM<-function( parameters.list = list() ) {
     }
     testo <- str_c(testo,"\n\t</workflow>")
     testo <- str_c(testo,"\n</xml>")
-    
+
     return(testo)
   }
   #=================================================================================
@@ -609,50 +634,50 @@ FOMM<-function( parameters.list = list() ) {
   #   num.of.transitions : the max number of allowed transitions for reaching the final state
   #   debugString : (TRUE/FALSE) is a debug string print for debuggin issues
   #   killAutoLoop : (TRUE/FALSE) suppress autoloop during computation?
-  #=================================================================================  
+  #=================================================================================
   get.transition.Prob<-function( initialState, finalState, num.of.transitions,debugString=NA,killAutoLoop=FALSE){
-    a<-getProb( stepAttuale=0, maxNumStep =num.of.transitions, 
-                statoAttuale=initialState, statoGoal =finalState, 
+    a<-getProb( stepAttuale=0, maxNumStep =num.of.transitions,
+                statoAttuale=initialState, statoGoal =finalState,
                 debugString=debugString,killAutoLoop=killAutoLoop)
     return(a)
-  } 
+  }
   getProb<-function( stepAttuale=0, maxNumStep =1, statoAttuale="BEGIN", statoGoal ="END", debugString=NA,killAutoLoop=FALSE) {
     if(is.na(debugString)) debugString<-statoAttuale;
-    
+
     if( statoAttuale==statoGoal ) {
       cat('\n ',debugString);
       return( 1 );
-    }  
+    }
     if( stepAttuale == maxNumStep & (statoAttuale!=statoGoal) ) {
       return( 0 );
-    }  
+    }
     if( killAutoLoop == FALSE ) MMPerc<-MMatrix.perc
     if( killAutoLoop == TRUE ) MMPerc<-MMatrix.perc.noLoop
-    prob<-0; 
+    prob<-0;
     for( possibileNuovoStato in rownames(MMPerc)) {
       if(MMPerc[statoAttuale,possibileNuovoStato]>0) {
         newdebugString<-paste(c(debugString,'=>',possibileNuovoStato),collapse='');
         addendo<-MMPerc[statoAttuale,possibileNuovoStato] * getProb( stepAttuale+1, maxNumStep,  possibileNuovoStato ,  statoGoal , debugString = newdebugString, killAutoLoop=killAutoLoop);
         prob<-prob + addendo
       }
-    }  
+    }
     return(prob);
-  }  
+  }
   #===========================================================
   # play.Single
-  #===========================================================  
+  #===========================================================
   play.Single<-function() {
-    
+
     ct<-1;
     res<-c();
     if(!is.null(parameters$considerAutoLoop)) considerAutoLoop<-parameters$considerAutoLoop
-    else considerAutoLoop<-TRUE  
+    else considerAutoLoop<-TRUE
     if ( !("END" %in% findReacheableNodes(nodoDiPatenza = "BEGIN") )) {
       cat("\n WARNING: END is not reacheable from 'BEGIN'! Maybe the threshold is too high? ")
       return(c() ) ;
     }
-    
-    # copia la tabella delle transizioni in una un po' piu' facile 
+
+    # copia la tabella delle transizioni in una un po' piu' facile
     # da maneggiare (almeno come nome)
     if ( considerAutoLoop == TRUE) MM<-MMatrix.perc
     else MM<-MMatrix.perc.noLoop
@@ -669,45 +694,45 @@ FOMM<-function( parameters.list = list() ) {
       }
     }
     res<-c(res,"END")
-    res<-res[ which( !(res %in%  c('BEGIN','END') ))    ] 
+    res<-res[ which( !(res %in%  c('BEGIN','END') ))    ]
     return(res);
-  }  
+  }
   #===========================================================
   # build.graph.from.table
   #===========================================================
   build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" , layout = "dot", rankDirLR = FALSE) {
-    
+
     if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
-    
+
     # prendi la lista dei nomi
     listaNodi<-colnames(MM)
     # la lista dei nodi raggiungibili da BEGIN
     listaNodiFromBegin<-listaNodi[which(MM["BEGIN",]>threshold)]
     # la lista dei nodi che vanno a END
     listaNodiToEnd<-listaNodi[which(MM[,"END"]>threshold)]
-    
+
     rigaBEGIN<-''
-    
+
     for( i in listaNodiFromBegin) {
-      rigaBEGIN<-paste(   c(rigaBEGIN, "'BEGIN'->'",i,"' "), collapse = '') 
-    }    
+      rigaBEGIN<-paste(   c(rigaBEGIN, "'BEGIN'->'",i,"' "), collapse = '')
+    }
     rigaEND<-''
     for( i in listaNodiToEnd) {
-      rigaEND<-paste(   c(rigaEND, "'",i,"'->'END' "), collapse = '') 
-    }        
-    
+      rigaEND<-paste(   c(rigaEND, "'",i,"'->'END' "), collapse = '')
+    }
+
     arr.nodi.con.archi <- c()
     stringaNodiComplessi<-''
     for(i in seq(1,nrow(MM))) {
       listaNodiRiga<-listaNodi[which(MM[i,]>=threshold)]
       if(length(listaNodiRiga)>0) {
         for( ct in seq(1,length(listaNodiRiga))) {
-          
+
           peso<-as.numeric(MM[i, listaNodiRiga[ct]])
           peso.rounded <- round(peso, digits = 2)
           denominatore <- sum(MMatrix[i, ])
-          numeratore <- MMatrix[i, listaNodiRiga[ct]] 
-          
+          numeratore <- MMatrix[i, listaNodiRiga[ct]]
+
           if (peso.rounded==0) {peso.rounded <- "<0.01"}
           penwidth<- peso*3 + 0.01
           if(penwidth<0.4) penwidth=0.4
@@ -745,64 +770,64 @@ FOMM<-function( parameters.list = list() ) {
         }
       }
     }
-    
+
     listaNodiToPrint<-''
     arr.nodi.con.archi <- unique(arr.nodi.con.archi)
-    
+
     listaNodi <- listaNodi[ listaNodi %in% arr.nodi.con.archi ]
-    
+
     for(i in seq(1,length(listaNodi))) {
       if(i<length(listaNodi)) listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"';"), collapse=''    )
       else listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"'"), collapse=''    )
     }
-    
+
     if( rankDirLR == FALSE ) {direzione <- ""
     }    else {
       direzione <- ", rankdir = LR"
     }
     # now plot it
     a<-paste(c("digraph boxes_and_circles {
-               
+
                # a 'graph' statement
                graph [overlap = true, fontsize = 10, layout = ",layout," ",direzione,"]
-               
+
                # several 'node' statements
                node [shape = oval,
                fontname = Helvetica,
                style = filled]
-               
-               node [fillcolor = green] 
-               'BEGIN'; 
-               
-               node [fillcolor = red] 
-               'END'; 
-               
+
+               node [fillcolor = green]
+               'BEGIN';
+
+               node [fillcolor = red]
+               'END';
+
                node [fillcolor = orange]
                ",listaNodiToPrint,"
-               
+
                edge [arrowsize = 1 ]
                # several edge
                ",stringaNodiComplessi,"
-  }"), collapse='')       
+  }"), collapse='')
     return(a)
-    
-  }   
+
+  }
   #===========================================================
   # distanceFrom.default
   # Metrica di default. In questo caso la metrica di default e' semplicemente la somma
-  # dei valori assoluti delle differenze di probabilita' fra le matrici di transizione 
-  # di stato. 
+  # dei valori assoluti delle differenze di probabilita' fra le matrici di transizione
+  # di stato.
   #===========================================================
   distanceFrom.default<-function( objToCheck) {
-    
+
     ext.MM <- objToCheck$getModel(kindOfOutput = "MMatrix.perc")
     int.MM <- MMatrix.perc
-    
+
     combinazioni<-calcolaMatriceCombinazioni( ext.MM = ext.MM, int.MM = int.MM)
-    
+
     distance<-sum(abs(combinazioni$ext - combinazioni$int))
     return( list(   "distance" = distance )      )
-  }  
+  }
   #===========================================================
   # distanceFrom.binaryCount
   # Una banale metrica: costruisce una maschera binaria degli stati a transizione
@@ -810,18 +835,18 @@ FOMM<-function( parameters.list = list() ) {
   # (conta '1' ogni volta che una e' '0' mentre l'altra e' '1')
   #===========================================================
   distanceFrom.binaryCount<-function( objToCheck) {
-    
+
     ext.MM <- objToCheck$getModel(kindOfOutput = "MMatrix.perc")
     int.MM <- MMatrix.perc
-    
+
     combinazioni<-calcolaMatriceCombinazioni( ext.MM = ext.MM, int.MM = int.MM)
-    
+
     combinazioni[ combinazioni[,"int"]>0, "int"] <-1
     combinazioni[ combinazioni[,"ext"]>0, "ext"] <-1
-    
+
     distance<-sum(abs(combinazioni$ext - combinazioni$int))
     return( list(   "distance" = distance )      )
-  }  
+  }
   #===========================================================
   # calcolaMatriceCombinazioni
   # Funzione di comodo che calcola in una matrice le differenze di probabilita'
@@ -835,9 +860,9 @@ FOMM<-function( parameters.list = list() ) {
     colnames(combinazioni)<-c("from","to","int","ext")
     combinazioni$from<-as.character(combinazioni$from)
     combinazioni$to<-as.character(combinazioni$to)
-    
+
     for(riga in seq(1,nrow(combinazioni))) {
-      
+
       if(  combinazioni[riga, "from"] %in%  colnames(int.MM)  &
            combinazioni[riga, "to"] %in%  colnames(int.MM)
       ) {
@@ -848,30 +873,30 @@ FOMM<-function( parameters.list = list() ) {
       ) {
         combinazioni[riga, "ext"]<-ext.MM[  combinazioni[riga, "from"] , combinazioni[riga, "to"]     ]
       }
-    }    
-    return(combinazioni)  
+    }
+    return(combinazioni)
   }
   #===========================================================
   # KaplanMeier
-  #===========================================================      
-  # KaplanMeier <- function( fromState, toState, 
-  #                          passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
+  #===========================================================
+  # KaplanMeier <- function( fromState, toState,
+  #                          passingThrough=c(), passingNotThrough=c(), stoppingAt=c(),
   #                          stoppingNotAt=c(), PDVAt=c(), withPatientID=c() )  {
-  #   
-  #   
-  #   
+  #
+  #
+  #
   # }
   #===========================================================
   # getClass
   # restituisce il tipo della classe corrente
-  #===========================================================    
+  #===========================================================
   getClass<-function(){
     return(list(
       "class"="FOMM",
       "obj.ID"=global.personal.ID,
-      "version"="0.44"      
+      "version"="0.44"
     ))
-  }    
+  }
   LogRankTest<-function( KM1 , KM2, col.1, col.2 )  {
     # browser()
     path.1 <- KM1
@@ -879,23 +904,1735 @@ FOMM<-function( parameters.list = list() ) {
     new.df <- rbind(path.1$table,path.2$table)
     new.df$KM <- c(rep("KM1",nrow(path.1$table) ),rep("KM2",nrow(path.2$table) ))
     logRank <- survdiff(Surv(time, outcome) ~ KM,data=new.df)
-    
+
     fitting <- survfit(Surv(time, outcome) ~ KM,data=new.df)
-    
+
     return( list("survdiff"=logRank , "survfit"=fitting) )
   }
+
+
+  # ***************************************************************************************************
+  # PREDICTIVE PROCESS DISCOVERY METHODS
+  # ***************************************************************************************************
+
+  #===========================================================
+  # Missing value attributes selection Function:
+  # ROW
+  #===========================================================
+
+  remove.miss.row<-function(df_tot, n.pat.delete=4){
+    missing.mat<-matrix(0,nrow = nrow(df_tot),ncol = (ncol(df_tot)-2))
+    rownames(missing.mat)<-df_tot[,"ID"]
+    colnames(missing.mat)<-colnames(df_tot)[-c(1,ncol(df_tot))]
+    tmp<-lapply(1:ncol(missing.mat), function(colonna){
+      tmp<-lapply(1:nrow(missing.mat), function(riga){
+        if(is.na(df_tot[riga,colonna])){missing.mat[riga,colonna]<<-1}
+      })
+    })
+
+    rep.pat<-unique(missing.mat[rownames(missing.mat[which(duplicated(missing.mat)),]),])
+    if(nrow(rep.pat)<=1){
+      list.out<-list()
+    }else{
+      rep.count<-matrix(0,nrow = nrow(rep.pat),ncol = 1)
+      att.miss.pat<-matrix(0,nrow = nrow(rep.pat),ncol = 1)
+      tmp<-lapply(1:nrow(rep.pat), function(riga.rep){
+        att.miss.pat[riga.rep]<<-sum(rep.pat[riga.rep,])
+        if(length(which(rep.pat[riga.rep,]==rep(0,ncol(rep.pat))))==ncol(rep.pat)){
+          rep.count[riga.rep,1]<<- 0
+          del.row<-0
+        }else{
+          del.row<-lapply(1:nrow(missing.mat), function(riga.miss){
+            if(length(which(missing.mat[riga.miss,]==rep.pat[riga.rep,]))==ncol(missing.mat)){
+              rep.count[riga.rep,1]<<- rep.count[riga.rep,1]+1
+              return(riga.miss)
+            }else{
+              return(NULL)
+            }
+          })
+        }
+        return(unlist(del.row))
+      })
+
+      missing.pat<-cbind(rep.pat,rep.count,att.miss.pat)
+      colnames(missing.pat)[(ncol(missing.pat)-1)]<-"count"
+      colnames(missing.pat)[ncol(missing.pat)]<-"n.att.miss"
+      missing.pat<-missing.pat[order(missing.pat[,"count"],decreasing = T),]
+
+      if(n.pat.delete>nrow(missing.pat)) n.pat.delete=nrow(missing.pat)
+
+      sum.miss<-unlist(lapply(1:ncol(missing.mat), function(colonna){sum(missing.mat[,colonna])}))
+      names(sum.miss)<-colnames(missing.mat)
+      sum.miss<-sort(sum.miss,decreasing = T)
+
+      id.to.del<-lapply(1:n.pat.delete, function(riga.pat){
+        tmp<-lapply(rownames(missing.mat), function(id.paz){
+          if(length(which(missing.mat[id.paz,]==missing.pat[riga.pat,1:(ncol(missing.pat)-2)]))==ncol(missing.mat)){
+            return(id.paz)
+          }else{
+            return(NULL)
+          }})
+        return(unlist(tmp))
+      })
+
+      df_tot.row<-df_tot[-which(df_tot[,"ID"] %in% unlist(id.to.del)),]
+
+      list.out<-list("df.clean.row"=df_tot.row,
+                     "missing.pat"=missing.pat,
+                     "missing.mat"=missing.mat,
+                     "counts.missing"=sum.miss)
+
+
+    }
+    return(list.out)
+  }
+
+  #===========================================================
+  # Missing value attributes selection Function:
+  # COL
+  #===========================================================
+
+  remove.miss.col<-function(df_tot, n.pat.delete=4, tec.type="backward", clean.row=T){
+
+    lst.clean.row<-remove.miss.row(df_tot =df_tot, n.pat.delete=n.pat.delete)
+    if(nrow(lst.clean.row$df.clean.row)==0 || length(lst.clean.row)==0){
+      list.out<-NULL
+    }else{
+      if(clean.row){
+        tmp_df<-lst.clean.row$df.clean.row
+        tmp.miss.mat<-lst.clean.row$missing.mat[tmp_df$ID,]
+      }else{
+        tmp_df<-df_tot
+        tmp.miss.mat<-lst.clean.row$missing.mat
+      }
+
+      count.miss<-unlist(lapply(1:ncol(tmp.miss.mat), function(colonna){sum(tmp.miss.mat[,colonna])}))
+      names(count.miss)<-colnames(tmp.miss.mat)
+      count.miss<-sort(count.miss,decreasing = T)
+
+      switch (tec.type,
+              "backward" = {
+                continue<-TRUE
+                arr.att<-names(lst.clean.row$counts.missing)
+                while (continue) {
+                  to.del<- arr.att[1]
+                  arr.att<-arr.att[-which(arr.att==arr.att[1])]
+                  tmp_df<-subset(tmp_df,select = colnames(tmp_df)[-which(colnames(tmp_df) %in% to.del)])
+                  tmp.miss.mat<-subset(tmp.miss.mat,select = colnames(tmp.miss.mat)[-which(colnames(tmp.miss.mat) %in% to.del)])
+                  if(nrow(na.omit(tmp_df))>nrow(na.omit(df_tot))){
+                    continue<-FALSE
+                  }}
+              }
+      )
+
+      df.clean.col<-subset(tmp_df,select = colnames(tmp_df)[which(colnames(tmp_df) %in% c("ID","y",arr.att))])
+      tmp.median<-lapply(1:ncol(df.clean.col), function(col.med){
+        if(length(which(is.na(df.clean.col[,col.med])))>0){
+          ind.na<-which(is.na(df.clean.col[,col.med]))
+          df.clean.col[ind.na,col.med]<<-median(df.clean.col[,col.med],na.rm = T)
+        }
+      })
+
+      counts.missing<-count.miss[which(names(count.miss) %in% arr.att)]
+
+      list.out<-list("df.clean.col"=df.clean.col,
+                     "missing.mat"=tmp.miss.mat,
+                     "missing.mat"=lst.clean.row$missing.mat,
+                     "counts.missing"=counts.missing)
+    }
+
+    return(list.out)
+  }
+
+
+
+  #===========================================================
+  # Search value function
+  #===========================================================
+  search_value<-function(sub.path,eventoDiPartenza,arr.attributi,type="att"){
+    if(type=="att"){
+      riga<-which(sub.path[,MM.csv.parameters$csv.EVENTName]==eventoDiPartenza)
+      values<-sub.path[riga,][arr.attributi]
+    }else{
+      values<-rep.int(NA,times = length(arr.attributi))
+    }
+    return(as.data.frame(values))
+  }
+
+  #===========================================================
+  # Model Performances
+  #===========================================================
+
+  compute.perf.fun<-function(model, df){
+    pred<-predict(model,newdata= df, type="response")
+    df$y_prob<-pred
+    df<-df[order(df$y_prob),]
+    df$y_pred<-"0"
+    arr.thr<-df$y_prob
+    list_roc<-lapply(arr.thr, function(thr){
+
+      df$y_pred[which(df$y_prob>thr)]<-"1"
+
+      TP<-length(which(df$y=="1" & df$y_pred=="1"))
+      TN<-length(which(df$y=="0" & df$y_pred=="0"))
+      FP<-length(which(df$y=="0" & df$y_pred=="1"))
+      FN<-length(which(df$y=="1" & df$y_pred=="0"))
+
+      x_FPR<-FP/(FP+TN)
+      y_TPR<- TP/(TP+FN)
+      acc<-(TP+TN)/(TP+TN+FP+FN)
+      return(c(thr,x_FPR,y_TPR,acc))
+
+    })
+
+    df_roc<-as.data.frame(do.call('rbind',list_roc))
+    colnames(df_roc)<-c("threshold","FPR","TPR","accuracy")
+
+    #calcolo AUC
+    FPR<-df_roc$FPR[order(df_roc$FPR)]
+    TPR<-df_roc$TPR[order(df_roc$TPR)]
+    dFPR <- c(0,diff(FPR))
+    dTPR <- c(0,diff(TPR))
+    AUC <- sum(TPR * dFPR) + sum(dTPR * dFPR)/2
+
+    #calcolo pval x att
+    tab<-summary(model)
+    pval<-tab$coefficients[,4][2:nrow(tab$coefficients)]
+
+    return(list("df_roc" = df_roc,"AUC" = AUC,"pval"= pval))
+  }
+
+  #===========================================================
+  # train LR model:
+  # logistic regression model and performances (on train/test or both)
+  # input: df_train, df_test, chosen.digit (for performaces approx), perf.train/perf.test (data on which compute perf)
+  #===========================================================
+
+  train.FOMM.LR <- function( df_train,df_test=data.frame(),chosen.digit = 4,perf.train = TRUE,perf.test=TRUE) {
+    if(nrow(df_test)==0){
+      perf.train=TRUE
+      perf.test=FALSE
+    }
+    df_train_tmp<-df_train
+   # df_train_tmp<-df_train[,2:ncol(df_train)]
+    glm.fit<-glm( y ~ ., data=df_train_tmp, family= binomial(link = "logit"))
+    if(perf.test & perf.train){
+      lst.perf.test<-compute.perf.fun(glm.fit,df_test)
+      lst.perf.train<-compute.perf.fun(glm.fit,df_train)
+      to_ret<-list("model"=glm.fit,"roc_test"= lst.perf.test$df_roc,"pval_test"= lst.perf.test$pval,"AUC_test" = lst.perf.test$AUC,
+                   "roc_train"= lst.perf.train$df_roc,"pval_train"=lst.perf.train$pval,"AUC_train"= lst.perf.train$AUC)
+    }else if(perf.train & !perf.test){
+      lst.perf.train<-compute.perf.fun(glm.fit,df_train)
+      to_ret<-list("model"=glm.fit,"roc_train"= lst.perf.train$df_roc,"pval_train"= lst.perf.train$pval,"AUC_train"= round(lst.perf.train$AUC,digits = chosen.digit))
+    }else{
+      lst.perf.test<-compute.perf.fun(glm.fit,df_test)
+      to_ret<-list("model"=glm.fit,"roc_test"= lst.perf.test$df_roc,"pval_test"= lst.perf.test$pval,"AUC_test"= round(lst.perf.test$AUC,digits = chosen.digit))
+    }
+
+    return(to_ret)
+  }
+
+  #===========================================================
+  # LR model + FS function---> compute LR model.
+  # oversamp.tec=> bootstrap, SMOTE
+  # perf.ind => AUC...
+  # acc.ind => accuracy, b.accuracy
+  #===========================================================
+
+  Predictive.model<-function(eventStart, eventGoal, arr.attributes, obj.out, arr.ID.train, arr.ID.test=c(), feature.selection=TRUE, k=1, p.train=0.7,
+                             p.thr=0.05, n.att=2, n.digit.out=4, passing=c(), NOTpassing=c(), max.time=Inf, min.time=0, UM="days", pred.disc=FALSE,
+                             arr.cand=c(), oversamp.tec="bootstrap", perf.ind="AUC",acc.ind="accuracy",omit.missing=F){
+
+    check.flag<-TRUE
+
+    obj.QOD<- pMineR::QOD(UM = UM )
+    obj.QOD$loadDataset(dataList = obj.out)
+
+    if(pred.disc){
+      #caso predictive pd: id.1=paz evGoal, id0=tutti gli altri paz che transitano in evStart
+      id.1<-obj.QOD$query(from = eventStart,to = eventGoal,time.range = c(min.time,max.time),step.range = c(1,1))
+      arr.cand<-arr.cand[-which(arr.cand==eventGoal)]
+
+      id.0<-unlist(lapply(arr.cand, function(ev.to){
+        if(param.verbose) print(paste("query ev.to:",ev.to))
+        return(obj.QOD$query(from = eventStart,to = ev.to, time.range = c(min.time,max.time),step.range = c(1,1)))}))
+      }else{
+        #caso predictive model
+        id.1<-obj.QOD$query(from = eventStart,to = eventGoal,arr.passingThrough = passing,arr.NOTpassingThrough = NOTpassing,time.range = c(min.time,max.time))
+        id.0<-obj.QOD$query(from = eventStart,to = "END",arr.NOTpassingThrough = c(eventGoal,NOTpassing),arr.passingThrough = passing, time.range = c(min.time,max.time))
+      }
+
+    #check output query fun: controllo che gli id1 e id0 non siano nulli e che id1 siano almeno un TOT (quanto deve valere questo tot? probabilmente almeno quanto il K dello smote)
+
+    if(length(which(is.na(id.1)))>1 || length(which(is.na(id.0)))>1 || length(id.1)<3){
+      check.flag<-FALSE
+      df_tot<-NULL
+
+    }else{
+
+      #query ha restituito degli id
+      ID<-c(id.1,id.0)
+      tmp<-lapply(ID, function(id){
+        att.val<-search_value(sub.path=obj.out$pat.process[[id]],eventStart,arr.attributes)
+        if(id %in% id.1){
+          y.val<-1
+        }else{
+          y.val<-0
+        }
+        return(cbind(id,att.val,y.val))
+      })
+
+      df_tot<-as.data.frame(do.call("rbind",tmp))
+      colnames(df_tot)<-c("ID",arr.attributes,"y")
+
+      for (i in c(1:length(arr.attributes))) {
+        df_tot[,arr.attributes[i]]<-as.numeric(df_tot[,arr.attributes[i]])
+      }
+
+      df_tot$y<-as.factor(df_tot$y)
+
+      #richiamo fun per gestione missing values
+      if(omit.missing){
+        df_tot<-na.omit(df_tot)
+      }else{
+        df_tot<-remove.miss.col(df_tot)$df.clean.col
+      }
+
+      # # df_tot<-na.omit(df_tot)
+      arr.attributes<-colnames(df_tot)[-which(colnames(df_tot) %in% c("ID","y"))]
+
+      if(n.att==Inf) n.att<-length(arr.attributes)
+
+
+      # if(nrow(df_tot[which(df_tot$ID %in% id.1),])<=3) df_tot<-NULL
+      # df_tot<-na.omit(df_tot)
+    }
+
+
+    #check righe di df_toto (post na.omit)
+    if(is.null(df_tot) || nrow(df_tot[which(df_tot$ID %in% id.1),])<=3 || is.na(arr.attributes)){
+      check.flag<-FALSE
+      data_tot<-NULL
+      to_ret<-list("res"=NULL,"run.check"=check.flag)
+    }else{
+      #divisione train test:
+      df_train <-df_tot[which(df_tot$ID %in% arr.ID.train),]
+
+      #K=3 parametro SMOTE
+      if(table(df_train$y)[2]>3){
+        if(table(df_train$y)[2]<round(nrow(df_train)*0.2)){
+          #calcolo di quanto deve aumentare la classe di minoranza affichè numero di 1 sia >20% tot
+          switch (oversamp.tec,
+                  "bootstrap" = {
+                    # unders_size<-round(sum(table(df_train$y))*0.2)-table(df_train$y)[2]
+                    unders_size<-round(0.25*table(df_train$y)[1]-table(df_train$y)[2])
+                    df1<-df_train[sample(x =  which(df_train$y==1), size = unders_size,replace = T ),]
+                    # df1<-df_train[which(df_train$y ==1),]
+                    df_train<-rbind(df_train,df1)
+                    df_train<-df_train[,-1]
+                  },
+                  "smote"={
+                    d_size<-round(0.25*(table(df_train$y)[1]/table(df_train$y)[2]))
+                    smote <- SMOTE(df_train[,-c(1,ncol(df_train))], df_train$y,dup_size = d_size,K = 3)
+                    df_train<-smote$data
+                    colnames(df_train)[length(colnames(df_train))]<-"y"
+                    df_train$y<-as.factor(df_train$y)
+                  }
+          )
+
+        }else{
+          df_train<-df_train[,-1]
+        }
+
+        if(is.null(arr.ID.test)){
+          df_test<-data.frame()
+        }else{
+          df_test<-df_tot[which(df_tot$ID %in% arr.ID.test),]
+          if(table(df_test$y)[2]<nrow(df_test)*0.1){
+            d_size<-round(0.25*(table(df_test$y)[1]/table(df_test$y)[2]))
+            smote <- SMOTE(df_test[,-c(1,ncol(df_test))], df_test$y,dup_size = d_size,K = 3)
+            df_test<-smote$data
+            colnames(df_test)[length(colnames(df_test))]<-"y"
+            df_test$y<-as.factor(df_test$y)
+          }else{
+            df_test<-df_test[,-1]
+          }
+        }
+
+
+        if(feature.selection){
+
+          lst.model<-lapply(1:k, function(ind.fold.test){
+            if(param.verbose){
+              print(paste("k fold:",ind.fold.test))
+            }
+
+            p.strat<-round(table(df_train$y)[2]/sum(table(df_train$y)),digits = 2)
+            continue<-TRUE
+            while (continue) {
+              ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
+              train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
+              test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
+              print(table(train_set$y))
+
+              perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
+              perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
+
+              # fattto check sulla stratificazione (((perc.test>=(p.strat-0.1)) & (perc.test<=(p.strat+0.05))))
+              if( ((perc.train>=(p.strat-0.1)) & (perc.train<=(p.strat+0.1))) & (perc.test>0 & perc.test<1) ) continue<-FALSE
+
+              # if((table(train_set$y)[2]>nrow(train_set)*0.2) & (table(test_set$y))[2]>=1) continue<-FALSE
+            }
+
+            print(paste("------>",table(train_set$y),"<------------"))
+            print(ind.train_set)
+
+
+
+            chosen.att<-c()
+
+            print("*******START STEPWISE**************")
+
+            lst.stepwise<-lapply(1:n.att, function(att){
+              if(param.verbose){
+                print(paste("n att:",att, "for fold test:", ind.fold.test))
+              }
+
+
+              if(is.null(chosen.att) || is.na(chosen.att)){
+                arr.att<-arr.attributes
+              }else{
+                arr.att<-arr.attributes[-which(arr.attributes %in% chosen.att)]
+              }
+
+
+              lst.perf<-list()
+              pval<-list()
+              AUC<-c()
+              roc_test<-list()
+
+              for (i in c(1:length(arr.att))) {
+                df.train<-subset(train_set,select = c(c(chosen.att,arr.att[i]),"y"))
+                df.test<-subset(test_set, select = c(c(chosen.att,arr.att[i]),"y"))
+                lst.perf[[i]]<-train.FOMM.LR(df.train,
+                                             df.test,
+                                             chosen.digit = 4,
+                                             perf.train = TRUE)
+
+                pval[[i]]<-lst.perf[[i]]$pval_train
+                AUC[i]<-lst.perf[[i]]$AUC_test
+                roc_test[[i]]<-lst.perf[[i]]$roc_test[which(lst.perf[[i]]$roc_test$accuracy==max(lst.perf[[i]]$roc_test$accuracy)),]
+                names(AUC)[i]<-paste0(i,"-",arr.att[i])
+              }
+
+              pval_tot<-do.call('rbind',pval)
+              roc_test_all<-do.call('rbind',roc_test)
+
+              if(ncol(pval_tot)==1){
+                ind.pval.ok<-which(pval_tot<=p.thr)
+              }else{
+                mat_log<-pval_tot<=p.thr
+
+                for(j in c(1:(ncol(pval_tot)-1))){
+                  new_col<-"&"(mat_log[,1],mat_log[,2])
+                  mat_log<-mat_log[,-c(j,j+1)]
+                  mat_log<-cbind(mat_log,new_col)
+                }
+                ind.pval.ok<-which(new_col)
+              }
+
+              if(identical(ind.pval.ok,integer(0))){
+                #caso in cui non ho trovato righe con pvalue su train <p.thr
+                chosen.att<<-c(chosen.att,NULL)
+                if(param.verbose){
+                  print("non ci sono p bassi")
+                }
+                to_ret<-NULL
+              }else{
+                AUC.tmp<-AUC
+                AUC.tmp[-ind.pval.ok]<-0
+                ind.chosen<-which(AUC.tmp==max(AUC.tmp))[1]
+                chosen.att<<-c(chosen.att,arr.att[ind.chosen])
+                if(param.verbose){
+                  print(paste("currente chosen:",chosen.att))
+                }
+                to_ret<-list("model_perf"=lst.perf[[ind.chosen]],
+                             "chosen_att"=chosen.att)
+              }
+
+              return(to_ret)
+
+            })
+
+            print("***********END STEPWISE***************")
+
+
+            names(lst.stepwise)<-paste0("att_",as.character(seq_along(1:n.att)))
+
+            if(length(which(lengths(lst.stepwise)==0))>0){
+              lst.stepwise<-lst.stepwise[-which(lengths(lst.stepwise)==0)]
+            }
+
+            if(length(lst.stepwise)==0){
+              lst.stepwise.final<-list()
+              to_ret<-NULL
+            }else{
+              lst.stepwise.final<-lst.stepwise[[length(lst.stepwise)]]
+
+              if(k!=1){
+                # fold.to.compute<-c(1:k)[-which(c(1:k) %in% ind.fold.test)]
+                AUC.all.fold<-lapply(1:(k-1), function(fold.comp.test){
+                  continue<-TRUE
+                  while (continue) {
+                    ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
+                    train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
+                    test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
+                    print(table(train_set$y))
+
+                    perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
+                    perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
+
+                    # fattto check sulla stratificazione
+                    if( ((perc.train>=(p.strat-0.1)) & (perc.train<=(p.strat+0.1))) & (perc.test>0 & perc.test<1)  ) continue<-FALSE
+
+                  }
+
+                  df.train<-subset(train_set,select = c(lst.stepwise.final$chosen_att,"y"))
+                  df.test<-subset(test_set, select = c(lst.stepwise.final$chosen_att,"y"))
+                  fold.to.check.mod <-train.FOMM.LR(df.train,
+                                                    df.test,
+                                                    chosen.digit = 4,
+                                                    perf.train = TRUE)
+
+                  ret_list<-list("model_perf" =fold.to.check.mod,
+                                   "class count"=table(test_set$y))
+
+
+
+                  return(ret_list)
+                })
+
+                names(AUC.all.fold)<-paste0("test_fold",seq_along(1:k)[-ind.fold.test])
+                to_ret<-list()
+                comp_fold_name<-paste0("test_fold",ind.fold.test)
+                to_ret[[comp_fold_name]]<-lst.stepwise.final
+                for (i in c(1:length(names(AUC.all.fold)))) {
+                  to_ret[[names(AUC.all.fold)[i]]]<-AUC.all.fold[[names(AUC.all.fold)[i]]]
+                }
+
+              }else{
+                to_ret<-lst.stepwise.final
+              }
+            }
+
+            return(to_ret)
+          })
+
+          names(lst.model)<-paste0("test.fold_",as.character(seq_along(1:k)))
+
+          if(length(which(lengths(lst.model)>0))>0){
+            lst.model<-lst.model[which(lengths(lst.model)>0)]
+            if(k==1){
+              best.att<-lst.model$test.fold_1$chosen_att
+              best_acc_ind<-which(lst.model$test.fold_1$model_perf$roc_test$accuracy==max(lst.model$test.fold_1$model_perf$roc_test$accuracy))
+              mat.att<-matrix(ncol = length(best.att)+3)
+              mat.att[1,]<-c(best.att,
+                             lst.model$test.fold_1$model_perf$AUC_test,
+                             lst.model$test.fold_1$model_perf$roc_test$threshold[best_acc_ind][1],
+                             lst.model$test.fold_1$model_perf$roc_test$accuracy[best_acc_ind][1])
+              colnames(mat.att)<-c(paste0("covariate_",seq_along(1:length(best.att))),"AUC.on.test.fold","threshold","accuracy")
+              arr.acc<-NULL
+              arr.AUC<-NULL
+              mat.att.total<-mat.att
+              if(nrow(df_test)==0){
+                final.models<-train.FOMM.LR(df_train[,c(best.att,"y")],
+                                            chosen.digit = 4,
+                                            perf.train = TRUE)
+              }else{
+                final.models<-train.FOMM.LR(df_train[,c(best.att,"y")],
+                                            df_test[,c(best.att,"y")],
+                                            chosen.digit = 4,
+                                            perf.train = TRUE)
+              }
+
+
+            }else{
+              best.att<-NULL
+              add.col<-3
+              mat.att<-matrix("",nrow = length(lst.model),ncol = n.att+add.col)
+              mat.att.total<-matrix("",nrow = length(lst.model),ncol = n.att+4)
+              for (i in c(1:length(lst.model))) {
+                chosen.att<-lst.model[[i]][[1]][[2]]
+
+                arr.AUC<-lapply(lst.model[[i]],function(inner.fold) {
+                  #QUI METTO CONDIZIONI SE VOGLIO UN ALTRO SCORE DIVERSO DA AUC.MEAN
+                  return(inner.fold$model_perf$AUC_test)
+                })
+
+                arr.acc<-lapply(lst.model[[i]],function(inner.fold){
+                  #accuratezza cambiare qui
+                  if(!is.null(inner.fold$model_perf)){
+
+                    switch (acc.ind,
+                            "accuracy" = {
+                              max.acc<-max(inner.fold$model_perf$roc_test$accuracy,na.rm = T)
+                              ret<-c(max.acc,inner.fold$model_perf$roc_test$threshold[which(inner.fold$model_perf$roc_test$accuracy==max.acc)])},
+
+                            "b.accuracy"={
+                              max.acc.test<-max(inner.fold$model_perf$roc_test$accuracy,na.rm = T)
+                              max.acc.train<-max(inner.fold$model_perf$roc_train$accuracy,na.rm = T)
+                              print(paste0(max.acc.test*0.632+max.acc.train*0.368))
+                              ret<-c(max.acc.test*0.632+max.acc.train*0.368,inner.fold$model_perf$roc_test$threshold[which(inner.fold$model_perf$roc_test$accuracy==max.acc)])
+                            }
+                    )
+                    # max.acc<-max(inner.fold$model_perf$roc_test$accuracy,na.rm = T)
+                    # ret<-c(max.acc,inner.fold$model_perf$roc_test$threshold[which(inner.fold$model_perf$roc_test$accuracy==max.acc)])
+                  }else{
+                    ret<-NULL
+                  }
+                  return(ret)
+                })
+
+
+                if(length(chosen.att)<(ncol(mat.att)-add.col)){
+                  ind.diff<-(ncol(mat.att)-add.col)-length(chosen.att)
+                  riga<-c(chosen.att,
+                          rep("",ind.diff),
+                          arr.AUC[[1]],
+                          arr.acc[[1]][2],
+                          arr.acc[[1]][1]
+                  )
+                  riga.total<-c(chosen.att,
+                                rep("",ind.diff),
+                                round(mean(unlist(arr.AUC)),digits = n.digit.out),
+                                round(sd(unlist(arr.AUC)),digits = n.digit.out),
+                                round(mean(unlist(lapply(arr.acc, function(i){return(i[[1]])}))),digits = n.digit.out),
+                                round(sd( unlist(lapply(arr.acc, function(i){return(i[[1]])}))),digits = n.digit.out))
+                }else{
+                  riga<-c(chosen.att,
+                          arr.AUC[[1]],
+                          arr.acc[[1]][2],
+                          arr.acc[[1]][1])
+                  riga.total<-c(chosen.att,
+                                round(mean(unlist(arr.AUC)),digits = n.digit.out),
+                                round(sd(unlist(arr.AUC)),digits = n.digit.out),
+                                round(mean(unlist(lapply(arr.acc, function(i){return(i[[1]])}))),digits = n.digit.out),
+                                round(sd( unlist(lapply(arr.acc, function(i){return(i[[1]])}))) ,digits = n.digit.out))
+                }
+                mat.att[i,]<-riga
+                mat.att.total[i,]<-riga.total
+              }
+
+              colnames(mat.att)<-c(paste0("covariate_",seq_along(1:n.att)),"AUC.on.test.fold","threshold","accuracy")
+              colnames(mat.att.total)<-c(paste0("covariate_",seq_along(1:n.att)),"AUC.mean.folds","AUC.sd.folds","acc.mean.folds","acc.sd.folds")
+              col_to_del<-lapply(1:(ncol(mat.att.total)-add.col-1), function(colonna){
+                if(length(which(mat.att.total[,colonna]==""))==nrow(mat.att.total)) to_del<-colonna
+              })
+              if(!is.null(unlist(col_to_del))) mat.att.total<-mat.att.total[,-unlist(col_to_del)]
+
+              final.models<-lapply(1:length(lst.model), function(i){
+                if(nrow(df_test)==0){
+                  final<-train.FOMM.LR(df_train[,c(lst.model[[i]][[1]][[2]],"y")],
+                                       chosen.digit = 4,
+                                       perf.train = TRUE)
+                }else{
+                  final<-train.FOMM.LR(df_train[,c(lst.model[[i]][[1]][[2]],"y")],
+                                       df_test[,c(lst.model[[i]][[1]][[2]],"y")],
+                                       chosen.digit = 4,
+                                       perf.train = TRUE)}
+
+                return(list("final.model"=final,
+                            "count_train"=table(df_train$y),
+                            "count_test"=nrow(df_test)))
+              })
+
+              names(final.models)<-paste0("model",seq_along(1:length(lst.model)))
+            }
+
+          }else{
+            check.flag<-FALSE
+            return(list("res"=NULL,
+                        "run.check"=check.flag))
+          }
+
+          lst_to_ret<-list("final.model"=final.models,
+                           "lst.models.fold"=lst.model,
+                           "mat.perf.total"=mat.att.total)
+          to_ret<-list("res"=lst_to_ret,"run.check"=check.flag)
+
+        }else{
+          if(length(arr.ID.test)>1){
+            dfTest<-df_test[,c(arr.attributes,"y")]
+          }else{
+            dfTest<-data.frame()
+          }
+          final.model<-train.FOMM.LR(df_train[,c(arr.attributes,"y")],
+                                     dfTest,
+                                     chosen.digit = 4,
+                                     perf.train = TRUE)
+          mat.att<-matrix(ncol = length(arr.attributes)+3)
+          if(length(arr.ID.test)>1){
+
+            mat.att[1,]<-c(arr.attributes,
+                           final.model$AUC_test,
+                           final.model$roc_test[which(final.model$roc_test$accuracy==max(final.model$roc_test$accuracy)),"accuracy"][1],
+                           final.model$roc_test[which(final.model$roc_test$accuracy==max(final.model$roc_test$accuracy)),"threshold"][1]
+            )
+            colnames(mat.att)<-c(paste0("covariate_",seq_along(1:length(arr.attributes))),"AUC.on.test.fold","threshold","accuracy")
+
+          }else{
+            mat.att[1,]<-c(arr.attributes,
+                           final.model$AUC_train,
+                           final.model$roc_train[which(final.model$roc_train$accuracy==max(final.model$roc_train$accuracy)),"accuracy"][1],
+                           final.model$roc_train[which(final.model$roc_train$accuracy==max(final.model$roc_train$accuracy)),"threshold"][1]
+            )
+            colnames(mat.att)<-c(paste0("covariate_",seq_along(1:length(arr.attributes))),"AUC.on.train.fold","threshold","accuracy")
+          }
+          arr.acc<-NULL
+          arr.AUC<-NULL
+          mat.att.total<-mat.att
+
+
+
+
+          lst_to_ret<-list("final.model"=final.model,
+                           "lst.models.fold"=NULL,
+                           "mat.perf.total"=mat.att.total)
+          to_ret<-list("res"=lst_to_ret,"run.check"=check.flag)
+        }
+
+      }else{
+        to_ret<-list("res"=NULL,"run.check"=FALSE)
+      }
+    }
+
+    return(to_ret)
+
+  }
+
+  #===========================================================
+  # predictiveProcessDiscovery
+  #===========================================================
+
+  Pred.mod.node<-function(arr.ID.train,nodeStart,feature.selection=T,k=5,arr.att,n.att,obj.out,all.graph=F,p.thr=0.05,omit.missing=F,vitro.test=F){
+
+
+    candidates<-colnames(obj.out$MMatrix)[which(obj.out$MMatrix[nodeStart,]!=0)]
+    if(length(candidates)>1){
+      lst.pred.mod<-lapply(candidates,function(eventGoal){
+        if(param.verbose) print(eventGoal)
+        first.out<-Predictive.model(eventStart = nodeStart,eventGoal = eventGoal,
+                                        obj.out = obj.out,arr.attributes = arr.att,
+                                        arr.ID.train = arr.ID.train,
+                                        arr.ID.test = c(),
+                                        feature.selection = feature.selection,k = k,n.att = n.att,pred.disc = T,arr.cand = candidates,p.thr = p.thr,
+                                        omit.missing = omit.missing)
+        if(first.out$run.check){
+          #modifico qui se voglio cambiare metrica per best model: nrow(first.out$res$mat.perf.total)==1 !!!!!!!
+          if(!is.matrix(first.out$res$mat.perf.total) || !feature.selection){
+            to_ret<-first.out$res$final.model[[1]]
+            if(vitro.test){
+              to_ret<-list("best_model"=to_ret,"performances"=first.out$res$mat.perf.total)
+            }
+          }else{
+            ind.best.model<-which(first.out$res$mat.perf.total[,"AUC.mean.folds"]==max(as.numeric(first.out$res$mat.perf.total[,"AUC.mean.folds"])))[1]
+            to_ret<-first.out$res$final.model[[names(first.out$res$final.model)[ind.best.model]]]
+            if(vitro.test){
+              to_ret<-list("best_model"=to_ret,"performances"=first.out$res$mat.perf.total)
+            }
+          }
+
+          }else{
+            to_ret<-obj.out$MMatrix.perc[nodeStart,eventGoal]
+            #caso in cui l'allenamento del modello non è andato a buon fine
+          }
+        return(to_ret)
+        })
+      names(lst.pred.mod)<-candidates
+      return_val<-lst.pred.mod
+      }else if(length(candidates)==1){
+        return_val<-obj.out$MMatrix.perc[nodeStart,candidates]
+        }else{
+          return_val<-"END"
+        }
+
+    return(return_val)
+  }
+
+  #===========================================================
+  # Process DIscovery all nodes
+  #===========================================================
+
+  Predictive.PD<-function(arr.ID.train,feature.selection=T,k=5,arr.att,n.att,obj.out){
+   all.node.mod<-lapply(row.names(obj.out$MMatrix), function(nodeStart){
+     if(param.verbose) print(paste("EVENT START:",nodeStart))
+     Pred.mod.node(arr.ID.train = arr.ID.train, nodeStart = nodeStart, feature.selection = feature.selection, k = k,arr.att = arr.att ,n.att = n.att, obj.out = obj.out)
+   })
+   names(all.node.mod)<-row.names(obj.out$MMatrix)
+  }
+
+  #===========================================================
+  # Gradient descent function
+  #===========================================================
+
+  grad.desc.fun<-function(arr.ID.test,nodeStart,obj.out,alpha.min=0.1,alpha.max=1,alpha.step=0.01, models, find.alpha=T,alpha.ratio=c(),comp.acc=TRUE){
+    tmp<-lapply(arr.ID.test, function(id){
+
+      sub.path=obj.out$pat.process[[id]]
+      ind.eventStart<-which(sub.path[,obj.out$csv.EVENTName]==nodeStart)
+      if(length(ind.eventStart)){
+        print(id)
+        #caso in cui il paz di test sperimenta l'evento di start
+        #inizio calcolando il suo y vero
+        next.ev<-sub.path[,obj.out$csv.EVENTName][ind.eventStart+1]
+        for(i in c(1:length(next.ev))){
+          if(is.na(next.ev[i]) & (ind.eventStart[i]+1)>nrow(sub.path)) next.ev[i]<-"END"
+
+        }
+
+
+        lst.mat<-lapply(1:length(next.ev),function(ind.ev){
+          ev<-next.ev[ind.ev]
+          pred.mat<-matrix(NA,ncol = 3,nrow = length(names(models)))
+          row.names(pred.mat)=names(models)
+          colnames(pred.mat)=c("y","y_prob","AUC")
+          tmp<-lapply(1:nrow(pred.mat), function(riga){
+
+            mod<-models[[rownames(pred.mat)[riga]]]
+            if(length(mod)==1){
+
+              pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
+              mat.row<-c(ev,pred,pred)
+            }else{
+              model.cov<-names(mod$final.model$pval_train)
+              att.val<-as.data.frame(search_value(sub.path=obj.out$pat.process[[id]],nodeStart,model.cov)[ind.ev,])
+              colnames(att.val)<-model.cov
+              if(length(which(is.na(att.val)))){
+
+                pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
+                mat.row<-c(ev,pred,pred)
+              }else{
+                pred<-predict.glm(mod$final.model$model,newdata = att.val,type = "response")
+                names(pred)=NULL
+                mat.row<-c(ev,pred,mod$final.model$AUC_train)
+              }
+            }
+            pred.mat[riga,]<<-mat.row
+          })
+          return(pred.mat)
+        })
+
+        to_ret<-list("pred.mat"=lst.mat,"y"=next.ev)
+      }else{
+        to_ret<-NULL
+      }
+      return(to_ret)
+    })
+
+    names(tmp)<-arr.ID.test
+
+
+    lst.ID.test<-tmp[-which(lengths(tmp)==0)]
+    if(length(lst.ID.test)>1){
+      if(find.alpha){
+        #costruisco la matrice degli alpha
+        arr.ratio <- seq(alpha.min, alpha.max, by = alpha.step)
+        arr.a1 <- rep(1,length(arr.ratio))
+        arr.a2 <- arr.a1 * arr.ratio
+        y<-arr.a1 #cost
+        x<-arr.a2
+
+        MM<-matrix(NA,ncol = length(x),nrow = 1)
+        colnames(MM)<-x
+        rownames(MM)<-y[1]
+
+        tmp<-lapply(1:ncol(MM), function(colonna){
+          alpha2<-as.numeric(colnames(MM)[colonna])
+          MM[1,colonna]<<-pred.accuracy.fun(alpha1 = arr.a1[1],alpha2 = alpha2 ,lst.ID.test)
+
+        })
+
+        # graphics::plot(x = arr.ratio,y = MM[1,],type = "l",xlab = "alpha ratio",ylab = "accuracy")
+        best_ratio<-colnames(MM)[which(MM[1,]==max(MM[1,]))][1]
+        ret_val<-best_ratio
+      }else{
+        if(!is.na(alpha.ratio)){
+          ret_val<-pred.accuracy.fun(alpha1 = 1,alpha2 = alpha.ratio ,lst.ID.test,comp.acc)
+        }else{
+          ret_val<-NA
+        }
+
+      }
+
+    }else if(length(lst.ID.test)==1 & !comp.acc){
+      ret_val<-pred.accuracy.fun(alpha1 = 1,alpha2 = alpha.ratio ,lst.ID.test,comp.acc)
+    }else{
+      ret_val<-NA
+    }
+
+    return(ret_val)
+
+  }
+
+  #===========================================================
+  # Compute.gen.perf: train global model
+  #===========================================================
+
+  compute.gen.perf<-function(arr.ID.train,arr.ID.test,feature.selection=T,k=5,arr.att,n.att,obj.out,alpha.min=0.01,alpha.max=1,alpha.step=0.01, grid_search=c(0.01,0.05,0.1,0.15),omit.missing=F,p.val.digit=4, AUC.digit=3){
+    test.hyper.param<-sample(arr.ID.test,size = length(arr.ID.test)*0.7)
+    test.param<-sample(test.hyper.param,size = length(test.hyper.param)*0.5)
+    test.final<-test.hyper.param[-which(test.hyper.param %in% test.param)]
+    test.val<-arr.ID.test[-which(arr.ID.test %in% c(test.param,test.final))]
+
+    # all.events<-rownames(obj.out$MMatrix)[-which(rownames(obj.out$MMatrix) %in% c("BEGIN","END","Onset","Start_trial"))]
+    all.events<-rownames(obj.out$MMatrix)[-which(rownames(obj.out$MMatrix) %in% c("BEGIN","END"))]
+    tmp<-lapply(all.events, function(nodeStart){
+      if(param.verbose) print(paste("analyzing node:",nodeStart))
+      # acc_val<-c()
+      tmp.grid<-lapply(grid_search, function(p.thr){
+        if(param.verbose) print(paste("analyzing node:",nodeStart, "p.thr",p.thr))
+        lst.pred<-Pred.mod.node(arr.ID.train = arr.ID.train,nodeStart = nodeStart,feature.selection = T,k = 5,arr.att = arr.att,n.att = 3,obj.out = obj.out,p.thr = p.thr,omit.missing = omit.missing)
+        if(length(lst.pred)==1 || lst.pred=="END" ||  length(which(lengths(lst.pred)==1))==length(lst.pred)){
+          acc_val<-NULL
+          lst.pred<-NULL
+          alpha.ratio<-NULL
+        }else{
+          alpha.ratio<-grad.desc.fun(test.param,nodeStart,obj.out,alpha.min=alpha.min,alpha.max=alpha.max,alpha.step=alpha.step, models= lst.pred)
+          acc_val<-grad.desc.fun(test.final,nodeStart,obj.out, models= lst.pred,find.alpha = F,alpha.ratio = as.numeric(alpha.ratio))
+          # acc_val<-cbind(acc_val,acc_val_tmp)
+        }
+        return(list("list.pred"=lst.pred,"acc_val"=acc_val,"p.val.thr"=p.thr,"alpha.ratio"=alpha.ratio))
+      })
+
+
+      names(tmp.grid)<-paste0("p.thr.",seq_along(1:length(grid_search)))
+      return(tmp.grid)
+    })
+
+
+    names(tmp)=all.events
+    # return(tmp)
+    lst.local.report<-report.fun(list.model = tmp,level = "local",grid_search =grid_search,p.val.digit=p.val.digit, AUC.digit=AUC.digit,obj.out = obj.out)
+    global.report<-report.fun(list.model = tmp,level = "global",grid_search =grid_search,p.val.digit=p.val.digit, AUC.digit=AUC.digit,obj.out = obj.out)
+    performances<-validation.fun(arr.ID.val=test.val,obj.out=obj.out,lst.local.rep=lst.local.report, global.rep=global.report, grid_search=grid_search, lst.model=tmp)
+    ret_list<-list("model.list"=tmp,"local.rep"=lst.local.report,"global.rep"=global.report,"perf"=performances)
+
+    return(ret_list)
+  }
+
+  #===========================================================
+  # Report.fun: generate report
+  #===========================================================
+
+  report.fun<-function(list.model,level="local",grid_search,p.val.digit=4,AUC.digit=3,obj.out){
+    tmp<-list.model
+
+    ### CONTROLLARE BENE BEST.THR ACCURATEZZE
+
+    best.thr<-lapply(tmp, function(lst.nodeStart){
+      lst.acc<-lapply(lst.nodeStart, function(val){return(val$acc_val)})
+      lst.acc[sapply(lst.acc, is.null)] <- NA
+      acc<-unlist(lst.acc)
+      # acc<-unlist(lapply(lst.nodeStart, function(val){return(val$acc_val)}))
+      lst.alpha<-lapply(lst.nodeStart, function(val){return(val$alpha.ratio)})
+      lst.alpha[sapply(lst.alpha, is.null)] <- NA
+      alpha.param<-unlist(lst.alpha)
+      if(is.null(acc)){
+        to_ret<-c(1,"","")
+      }else if(length(which(is.na(acc)))>1){
+        to_ret<-c(NA,"","")
+      }else{
+
+        to_ret<-c(max(acc,na.rm = T),grid_search[which(acc==max(acc,na.rm = T))][1],alpha.param[which(acc==max(acc,na.rm = T))][1])
+
+      }
+      return(to_ret)
+    })
+
+
+    switch (level,
+      "local" = {
+        lst.MM.report<-lapply(names(tmp), function(nodeStart){
+          print(nodeStart)
+         if(best.thr[[nodeStart]][2]!=""){
+           MM.report<-matrix("",nrow = length(names(tmp[[nodeStart]][[which(grid_search==best.thr[[nodeStart]][2])]]$list.pred)),ncol = 8)
+           colnames(MM.report)<-c("nodeStart","nodeGoal","model","AUC","pval","covariate","id.0","id.1")
+           MM.report[,"nodeStart"]<-nodeStart
+           MM.report[,"nodeGoal"]<-names(tmp[[nodeStart]][[which(grid_search==best.thr[[nodeStart]][2])]]$list.pred)
+
+           if(best.thr[[nodeStart]][2]!=""){
+             list.pred<-tmp[[nodeStart]][[paste0("p.thr.",which(grid_search==best.thr[[nodeStart]][2]))]][[1]]
+
+             arr.AUC<-lapply(names(list.pred), function(eventGoal){
+
+               if(length(list.pred[[eventGoal]])==1){
+                 if(length(list.pred[[eventGoal]][[1]])!=1){
+                   to_ret<-c(list.pred[[eventGoal]][[1]]$final.model$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$final.model$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$final.model$pval_train),collapse = " "))
+                 }else{
+                   # list.pred[[eventGoal]]
+                   to_ret<-c(list.pred[[eventGoal]],"","")
+                 }
+               }else{
+
+                 # list.pred[[eventGoal]]$final.model$AUC_train
+                 to_ret<-c(list.pred[[eventGoal]]$final.model$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$final.model$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$final.model$pval_train),collapse = " "))
+               }
+             })
+
+             arr.count<-lapply(names(list.pred), function(eventGoal){
+               if(length(list.pred[[eventGoal]])==1){
+
+                 to_ret<-c("","")
+               }else{
+                 # list.pred[[eventGoal]]$final.model$AUC_train
+                 to_ret<-list.pred[[eventGoal]]$count_train
+               }
+             })
+
+             model.sign<-lapply(names(list.pred), function(eventGoal){
+               if(length(list.pred[[eventGoal]])==1){
+
+                 to_ret<-c("used FOMM")
+               }else{
+                 # list.pred[[eventGoal]]$final.model$AUC_train
+                 to_ret<-paste(list.pred[[eventGoal]]$final.model$model$call[1:3],collapse = " ")
+               }
+             })
+
+
+             MM.report[,"model"]<-unlist(model.sign)
+             for(i in c(1:length(arr.AUC))){
+               MM.report[i,"AUC"]<-round(as.numeric(arr.AUC[[i]][1]),digits = AUC.digit)
+               MM.report[i,"pval"]<-arr.AUC[[i]][2]
+               MM.report[i,"covariate"]<-arr.AUC[[i]][3]
+               MM.report[i,"id.0"]<-arr.count[[i]][1]
+               MM.report[i,"id.1"]<-arr.count[[i]][2]
+
+             }
+             table.to.ret<-as.table(MM.report)
+           }else{
+             table.to.ret<-NULL
+           }
+
+         }else{
+           table.to.ret<-NULL
+         }
+
+          return(table.to.ret)
+
+        })
+
+        names(lst.MM.report)<-names(tmp)
+        to.ret.rep<-lst.MM.report
+
+
+      },
+      "global"={
+        MM.report<-matrix("",nrow = length(names(tmp)),ncol = 5)
+        colnames(MM.report)<-c("NodeName","acc.FOMM","acc.LR","pval_thr","alpha.ratio")
+        MM.report[,"NodeName"]<-names(tmp)
+        MM.report[,"acc.FOMM"]<-unlist(lapply(names(tmp), function(riga){return(max(obj.out$MMatrix.perc[riga,]))}))
+        for (i in c(1:length(best.thr))) {
+          MM.report[i,"acc.LR"]<-best.thr[[i]][1]
+          MM.report[i,"pval_thr"]<-best.thr[[i]][2]
+          MM.report[i,"alpha.ratio"]<-best.thr[[i]][3]
+
+        }
+        to.ret.rep<-as.table(MM.report)
+      }
+    )
+
+    return(to.ret.rep)
+
+
+  }
+  #===========================================================
+  # Prediction Accuracy function
+  #===========================================================
+
+  validation.fun<-function(arr.ID.val,obj.out,lst.local.rep, global.rep, grid_search, lst.model){
+    tmp.ID.traces<-lapply(arr.ID.val, function(id.paz){
+      paz.trace<-obj.out$pat.process[[id.paz]][,obj.out$csv.EVENTName]
+      paz.trace.pred<-paz.trace
+      paz.trace.fomm<-paz.trace
+      for(i in seq(1,(length(paz.trace)-1))){
+
+        nodeStart<-paz.trace[i]
+        nodeStart.rep<-lst.local.rep[[nodeStart]]
+
+        if(is.null(nodeStart.rep)) {
+          nodeNext<-names(which(obj.out$MMatrix.perc[nodeStart,]==max(obj.out$MMatrix.perc[nodeStart,])))
+        }else{
+
+          #cosa mi serve per calcolare predizioni?
+          #modelli allenati per ogni possibile nodo futuro + alpha1 e alpha 2 x ranking
+          chosen.p.thr<-which(grid_search==as.numeric(global.rep[which(global.rep[,"NodeName"]==nodeStart),4]))
+          chosen.alpha.param<-as.numeric(global.rep[which(global.rep[,"NodeName"]==nodeStart),5])
+          MM.matrix.pred<-grad.desc.fun(arr.ID.val,nodeStart,obj.out,find.alpha = F, models= lst.model[[nodeStart]][[chosen.p.thr]]$list.pred, comp.acc = F, alpha.ratio = chosen.alpha.param)
+
+          ind.next<-which(startsWith(x = rownames(MM.matrix.pred),prefix = id.paz))
+          nodeNext<-MM.matrix.pred[ind.next,1]
+
+          if(ind.next[1]<=i){
+            nodeNext<-nodeNext[1]
+          }
+          # nodeNext<-MM.matrix.pred[id.paz,1]
+
+        }
+        paz.trace.pred[i+1]<-nodeNext
+        paz.trace.fomm[i+1]<-names(which(obj.out$MMatrix.perc[nodeStart,]==max(obj.out$MMatrix.perc[nodeStart,])))
+      }
+
+      return(list("trace"=paz.trace,"trace.pred"=paz.trace.pred,"trace.fomm"=paz.trace.fomm))
+
+    })
+
+    names(tmp.ID.traces)<-arr.ID.val
+
+
+    lst.tr<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace,"END"))})
+    lst.tr.pred<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace.pred,"END"))})
+    lst.tr.fomm<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace.fomm,"END"))})
+
+
+
+    lst.tr.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace)})
+    lst.tr.pred.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace.pred)})
+    lst.tr.fomm.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace.fomm)})
+
+
+    MM.acc<-matrix(0,nrow =length(lst.tr.comp),ncol = max(lengths(lst.tr.comp)))
+    MM.acc.fomm<-MM.acc
+    rownames(MM.acc)<-names(lst.tr.comp)
+    rownames(MM.acc.fomm)<-names(lst.tr.comp)
+    lapply(1:length(lst.tr.comp),function(ind.paz){
+      true.tr<-lst.tr.comp[[ind.paz]]
+      pred.tr<-lst.tr.pred.comp[[ind.paz]]
+      fomm.tr<-lst.tr.fomm.comp[[ind.paz]]
+      paz<-names(lst.tr.comp)[ind.paz]
+      print(paz)
+      if(length(true.tr)<ncol(MM.acc)){
+        riga<-c(true.tr==pred.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
+        riga.fomm<-c(true.tr==fomm.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
+
+      }else{
+        riga<-true.tr==pred.tr
+        riga.fomm<-true.tr==fomm.tr
+      }
+
+      # for(ev in c(1:(length(true.tr-1)))){
+      MM.acc[paz,]<<-riga
+      MM.acc.fomm[paz,]<<-riga.fomm
+    })
+
+    n.cells<-(dim(MM.acc)[1]*dim(MM.acc)[2])-length(which(is.na(MM.acc)))
+    performances<-list("fomm"=(sum(MM.acc.fomm,na.rm = T)/n.cells),"pred"=(sum(MM.acc,na.rm = T)/n.cells))
+
+    return(performances)
+
+  }
+
+
+
+
+  #===========================================================
+  # Prediction Accuracy function
+  #===========================================================
+
+  pred.accuracy.fun<-function(alpha1,alpha2,lst.ID.test,comp.acc=TRUE){
+    tmp<-lapply(lst.ID.test, function(lst.pred.id){
+      y_vera<-lst.pred.id$y
+      fun.rank.out<-lapply(lst.pred.id$pred.mat, function(pred.mat){
+        fun.rank<-lapply(1:nrow(pred.mat), function(riga){
+          # to_ret<-alpha1*(as.numeric(lst.pred.id$pred.mat[riga,"y_prob"])+as.numeric(lst.pred.id$pred.mat[riga,"AUC"]))
+          to_ret<-alpha1*as.numeric(pred.mat[riga,"y_prob"])+alpha2*as.numeric(pred.mat[riga,"AUC"])
+          return(to_ret)
+        })
+        names(fun.rank)<-rownames(pred.mat)
+        arr.prest<-unlist(fun.rank)
+        best.pred<-names(arr.prest)[which(arr.prest==max(arr.prest,na.rm = T))][1]
+        return(best.pred)
+      })
+      # return(list(unlist(fun.rank.out),y_vera))
+
+      return(unlist(fun.rank.out))
+    })
+
+
+    tmp<-unlist(tmp)
+
+    MM.pred<-matrix(NA, nrow = length(tmp), ncol = 3)
+    rownames(MM.pred)<-names(tmp)
+    colnames(MM.pred)<-c("y_pred","y","correct.pred")
+    MM.pred[,1]<-unlist(tmp,use.names = FALSE)
+    MM.pred[,2]<-unlist(lapply(lst.ID.test, function(lst.y){return(lst.y$y)}))
+
+    for(i in c(1:nrow(MM.pred))){
+      print(i)
+      if(MM.pred[i,1]==MM.pred[i,2]){
+        MM.pred[i,3]=1
+      }else{
+        MM.pred[i,3]=0
+      }
+    }
+
+    acc<-sum(as.numeric(MM.pred[,3]))/nrow(MM.pred)
+
+    if(comp.acc){
+      to_return<-acc
+    }else{
+      to_return<-MM.pred
+    }
+    return(to_return)
+
+  }
+
+
+  #===========================================================
+  # CREAZIONE GRAFO
+  #===========================================================
+
+  # build.graph.from.table1<-function(MM, threshold , type.of.graph= "delta" , layout = "dot", rankDirLR = FALSE, pred.graph=F,global.rep=c(),local.rep=list(), acc.digit=3,val.plot=F,MM.trace.perc=c()) {
+  #
+  #   #controllo formale per pred.graph
+  #   if(pred.graph==T & length(global.rep)==0) pred.graph=F
+  #
+  #   if(type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
+  #
+  #   # prendi la lista dei nomi
+  #   listaNodi<-colnames(MM)
+  #
+  #   #listaNodi.LR: array di stringhe in cui specifico (se c'è) acc del modello pred
+  #   listaNodi.LR<-listaNodi
+  #
+  #   #lista nodi per cui ho un modello predittivo
+  #   listaNodiLR<-global.rep[-(which(global.rep[,3] %in% c("1",NA))),"NodeName"]
+  #
+  #   if(pred.graph){
+  #     # row.LR<-global.rep[-(which(global.rep[,"acc.LR"] %in% c("1",NA))),]
+  #     for (i in seq(1,length(listaNodi))) {
+  #       if(listaNodi[i] %in% listaNodiLR){
+  #         acc.add<-round(as.numeric(global.rep[which(global.rep[,"NodeName"]==listaNodi[i]),3]),digits = acc.digit)
+  #         acc.fomm<-round(as.numeric(global.rep[which(global.rep[,"NodeName"]==listaNodi[i]),2]),digits = acc.digit)
+  #         listaNodi.LR[i]<-paste(listaNodi.LR[i],"\n acc:",acc.add,"fomm:",acc.fomm)
+  #       }
+  #     }
+  #   }
+  #
+  #
+  #   # la lista dei nodi raggiungibili da BEGIN
+  #   listaNodiFromBegin<-listaNodi[which(MM["BEGIN",]>threshold)]
+  #   # la lista dei nodi che vanno a END
+  #   listaNodiToEnd<-listaNodi[which(MM[,"END"]>threshold)]
+  #
+  #   rigaBEGIN<-''
+  #
+  #   for( i in listaNodiFromBegin) {
+  #     rigaBEGIN<-paste(   c(rigaBEGIN, "'BEGIN'->'",i,"' "), collapse = '')
+  #   }
+  #   rigaEND<-''
+  #   for( i in listaNodiToEnd) {
+  #     rigaEND<-paste(   c(rigaEND, "'",i,"'->'END' "), collapse = '')
+  #   }
+  #
+  #   arr.nodi.con.archi <- c()
+  #   stringaNodiComplessi<-''
+  #
+  #   for(i in seq(1,nrow(MM))) {
+  #     listaNodiRiga<-listaNodi[which(MM[i,]>=threshold)]
+  #     listaNodiRiga.LR<-listaNodiRiga
+  #
+  #     if(length(listaNodiRiga)>0) {
+  #       for(ct in seq(1,length(listaNodiRiga))) {
+  #
+  #         if(pred.graph){
+  #           if(listaNodiRiga[ct] %in% listaNodiLR){
+  #             listaNodiRiga.LR[ct]<-paste(listaNodiRiga.LR[ct],"\n acc:",round(as.numeric(global.rep[which(global.rep[,"NodeName"]==listaNodiRiga.LR[ct]),3]),digits = acc.digit),"fomm:",round(as.numeric(global.rep[which(global.rep[,"NodeName"]==listaNodiRiga.LR[ct]),2]),digits = acc.digit))
+  #             }
+  #           }
+  #
+  #         peso<-as.numeric(MM[i, listaNodiRiga[ct]])
+  #         peso.rounded <- round(peso, digits = 2)
+  #         denominatore <- sum(MMatrix[i, ])
+  #         numeratore <- MMatrix[i, listaNodiRiga[ct]]
+  #
+  #         if(pred.graph & listaNodi[i] %in% names(lengths(lst.MM.report)[which(lengths(lst.MM.report)!=0)])){
+  #           row_ind<-which(lst.MM.report[[listaNodi[[i]]]][,2]==listaNodiRiga[ct])
+  #           # perf.mod<-lst.MM.report[[listaNodi[i]]][row_ind,4]
+  #           # pval.mod<-lst.MM.report[[listaNodi[i]]][row_ind,5]
+  #           # arr.cov <-lst.MM.report[[listaNodi[i]]][row_ind,6]
+  #           AUC.arco<-lst.MM.report[[listaNodi[i]]][row_ind,4]
+  #         }else{
+  #           AUC.arco<-NULL
+  #           # pval.mod<-NULL
+  #         }
+  #
+  #         if (peso.rounded==0) {peso.rounded <- "<0.01"}
+  #         penwidth<- peso*3 + 0.01
+  #         if(penwidth<0.4) penwidth=0.4
+  #         fontSize = 5+peso*9
+  #         colore = as.integer(100-(30+peso*70))
+  #         if(peso > threshold) {
+  #           if(pred.graph & !(is.null(AUC.arco) || identical(AUC.arco,character(0)))){
+  #             if(AUC.arco==""){
+  #                 stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
+  #               }else{
+  #                 # coppia<-c()
+  #                 # arr.cov<-unlist(strsplit(arr.cov,split = " "))
+  #                 # pval.mod<-unlist(strsplit(pval.mod,split = " "))
+  #                 # for (pv in seq(1,length(pval.mod))) {
+  #                 #   riga.coppia<-paste(arr.cov[pv],":",pval.mod[pv],"\n",sep = "")
+  #                 #   coppia<-paste(c(coppia,riga.coppia),collapse = "")
+  #                 # }
+  #                 stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )","\n" ,AUC.arco),collapse = '')
+  #               }
+  #               # stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )","\n","cov:",arr.cov,"pval:",pval.mod),collapse = '')
+  #             }else{
+  #               stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
+  #             }
+  #             # stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
+  #             # stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )","\n","cov:",arr.cov,"pval:",pval.mod),collapse = '')
+  #             # stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso.rounded,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
+  #             stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi.LR[i],"'->'",listaNodiRiga.LR[ct],"' [ label='",stringa.arco,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
+  #             arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi.LR[i],listaNodiRiga.LR[ct])
+  #           }
+  #       }
+  #     }
+  #   }
+  #
+  #   listaNodiToPrint<-''
+  #   arr.nodi.con.archi <- unique(arr.nodi.con.archi)
+  #
+  #   listaNodi <- listaNodi[ listaNodi %in% arr.nodi.con.archi ]
+  #   for(i in seq(1,length(listaNodi))) {
+  #     if(i<length(listaNodi)) listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"';"), collapse=''    )
+  #     else listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"'"), collapse=''    )
+  #   }
+  #
+  #
+  #
+  #   if( rankDirLR == FALSE ) {direzione <- ""
+  #   }    else {
+  #     direzione <- ", rankdir = LR"
+  #   }
+  #
+  #
+  #   # now plot it
+  #   if(pred.graph){
+  #     NodiBetter<-global.rep[which(global.rep[,3]>global.rep[,2]),"NodeName"]
+  #
+  #     scelti<-c()
+  #     for(i in seq(1,length(arr.nodi.con.archi))){
+  #       for(j in seq(1,length(NodiBetter))){
+  #         if(startsWith(x = arr.nodi.con.archi[i],prefix = NodiBetter[j])){scelti[i]<-arr.nodi.con.archi[i]}
+  #       }
+  #     }
+  #
+  #
+  #     listaNodiBetterPrint<-''
+  #
+  #     listaNodiBetter<-na.omit(scelti)
+  #     for(i in seq(1,length(listaNodiBetter))) {
+  #       if(i<length(listaNodiBetter)) listaNodiBetterPrint <- paste( c(listaNodiBetterPrint," '",listaNodiBetter[i],"';"), collapse=''    )
+  #       else listaNodiBetterPrint <- paste( c(listaNodiBetterPrint," '",listaNodiBetter[i],"'"), collapse=''    )
+  #     }
+  #
+  #     listaNodiMod<-arr.nodi.con.archi[!(arr.nodi.con.archi %in% listaNodi) & !(arr.nodi.con.archi %in% listaNodiBetter)]
+  #
+  #     listaNodiLRToPrint<-''
+  #     for(i in seq(1,length(listaNodiMod))) {
+  #       if(i<length(listaNodiMod)) listaNodiLRToPrint <- paste( c(listaNodiLRToPrint," '",listaNodiMod[i],"';"), collapse=''    )
+  #       else listaNodiLRToPrint <- paste( c(listaNodiLRToPrint," '",listaNodiMod[i],"'"), collapse=''    )
+  #     }
+  #
+  #
+  #     a<-paste(c("digraph boxes_and_circles {
+  #
+  #              # a 'graph' statement
+  #              graph [overlap = true, fontsize = 10, layout = ",layout," ",direzione,"]
+  #
+  #              # several 'node' statements
+  #              node [shape = oval,
+  #              fontname = Helvetica,
+  #              style = filled]
+  #
+  #              node [fillcolor = green]
+  #              'BEGIN';
+  #
+  #              node [fillcolor = red]
+  #              'END';
+  #
+  #              node [fillcolor = orange]
+  #              ",listaNodiToPrint,"
+  #
+  #              node [fillcolor = Goldenrod]
+  #              ",listaNodiLRToPrint,"
+  #
+  #
+  #              node [fillcolor = Gold]
+  #              ",listaNodiBetterPrint,"
+  #
+  #              edge [arrowsize = 1 ]
+  #              # several edge
+  #              ",stringaNodiComplessi,"
+  # }"), collapse='')
+  #
+  #
+  #
+  #
+  #   }else{
+  #     if(val.plot){
+  #       listaNodiTracePrint=''
+  #       listaNodiTR <- listaNodi[ listaNodi %in% colnames(MM.trace.perc)]
+  #       for(i in seq(1,length(listaNodiTR))) {
+  #         if(i<length(listaNodiTR)) listaNodiTracePrint <- paste( c(listaNodiTracePrint," '",listaNodiTR[i],"';"), collapse=''    )
+  #         else listaNodiTracePrint <- paste( c(listaNodiTracePrint," '",listaNodiTR[i],"'"), collapse=''    )
+  #       }
+  #
+  #       listaNodi.gr<-listaNodi[!(listaNodi %in% listaNodiTR)]
+  #       listaNodiGRPrint<-''
+  #       for(i in seq(1,length(listaNodi.gr))) {
+  #         if(i<length(listaNodi.gr)) listaNodiGRPrint <- paste( c(listaNodiGRPrint," '",listaNodi.gr[i],"';"), collapse=''    )
+  #         else listaNodiGRPrint <- paste( c(listaNodiGRPrint," '",listaNodi.gr[i],"'"), collapse=''    )
+  #       }
+  #
+  #
+  #
+  #       a<-paste(c("digraph boxes_and_circles {
+  #
+  #              # a 'graph' statement
+  #              graph [overlap = true, fontsize = 10, layout = ",layout," ",direzione,"]
+  #
+  #              # several 'node' statements
+  #              node [shape = oval,
+  #              fontname = Helvetica,
+  #              style = filled]
+  #
+  #              node [fillcolor = green]
+  #              'BEGIN';
+  #
+  #              node [fillcolor = red]
+  #              'END';
+  #
+  #              node [fillcolor = gray]
+  #              ",listaNodiGRPrint,"
+  #
+  #              node [fillcolor = orange]
+  #              ",listaNodiTracePrint,"
+  #
+  #              edge [arrowsize = 1 ]
+  #              # several edge
+  #              ",stringaNodiComplessi,"
+  # }"), collapse='')
+  #
+  #     }else{
+  #       a<-paste(c("digraph boxes_and_circles {
+  #
+  #              # a 'graph' statement
+  #              graph [overlap = true, fontsize = 10, layout = ",layout," ",direzione,"]
+  #
+  #              # several 'node' statements
+  #              node [shape = oval,
+  #              fontname = Helvetica,
+  #              style = filled]
+  #
+  #              node [fillcolor = green]
+  #              'BEGIN';
+  #
+  #              node [fillcolor = red]
+  #              'END';
+  #
+  #              node [fillcolor = orange]
+  #              ",listaNodiToPrint,"
+  #
+  #              edge [arrowsize = 1 ]
+  #              # several edge
+  #              ",stringaNodiComplessi,"
+  # }"), collapse='')
+  #     }
+  #
+  #
+  #
+  #   }
+  #
+  #
+  #
+  #
+  #   return(a)
+  #
+  # }
+
+  #===========================================================
+  # Validation graph
+  #===========================================================
+
+  validation.graph<-function(arr.ID.val,obj.out,lst.local.rep, global.rep, grid_search, lst.model, on.global=F){
+    tmp.ID.traces<-lapply(arr.ID.val, function(id.paz){
+      paz.trace<-obj.out$pat.process[[id.paz]][,obj.out$csv.EVENTName]
+      paz.trace.pred<-paz.trace
+      paz.trace.fomm<-paz.trace
+      for(i in seq(1,(length(paz.trace)-1))){
+
+        nodeStart<-paz.trace[i]
+        nodeStart.rep<-lst.local.rep[[nodeStart]]
+
+        if(is.null(nodeStart.rep)) {
+         nodeNext<-names(which(obj.out$MMatrix.perc[nodeStart,]==max(obj.out$MMatrix.perc[nodeStart,])))
+        }else{
+
+          #cosa mi serve per calcolare predizioni?
+          #modelli allenati per ogni possibile nodo futuro + alpha1 e alpha 2 x ranking
+          chosen.p.thr<-which(grid_search==as.numeric(global.rep[which(global.rep[,"NodeName"]==nodeStart),4]))
+          chosen.alpha.param<-as.numeric(global.rep[which(global.rep[,"NodeName"]==nodeStart),5])
+          MM.matrix.pred<-grad.desc.fun(arr.ID.val,nodeStart,obj.out,find.alpha = F, models= lst.model[[nodeStart]][[chosen.p.thr]]$list.pred, comp.acc = F, alpha.ratio = chosen.alpha.param)
+
+          ind.next<-which(startsWith(x = rownames(MM.matrix.pred),prefix = id.paz))
+          nodeNext<-MM.matrix.pred[ind.next,1]
+
+          if(ind.next[1]<=i){
+            nodeNext<-nodeNext[1]
+          }
+          # nodeNext<-MM.matrix.pred[id.paz,1]
+
+        }
+        paz.trace.pred[i+1]<-nodeNext
+        paz.trace.fomm[i+1]<-names(which(obj.out$MMatrix.perc[nodeStart,]==max(obj.out$MMatrix.perc[nodeStart,])))
+      }
+
+      return(list("trace"=paz.trace,"trace.pred"=paz.trace.pred,"trace.fomm"=paz.trace.fomm))
+
+    })
+
+    names(tmp.ID.traces)<-arr.ID.val
+
+
+    lst.tr<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace,"END"))})
+    lst.tr.pred<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace.pred,"END"))})
+    lst.tr.fomm<-lapply(tmp.ID.traces, function(paz){return(c("BEGIN",paz$trace.fomm,"END"))})
+
+
+
+    lst.tr.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace)})
+    lst.tr.pred.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace.pred)})
+    lst.tr.fomm.comp<-lapply(tmp.ID.traces, function(paz){return(paz$trace.fomm)})
+
+
+    MM.acc<-matrix(0,nrow =length(lst.tr.comp),ncol = max(lengths(lst.tr.comp)))
+    MM.acc.fomm<-MM.acc
+    rownames(MM.acc)<-names(lst.tr.comp)
+    rownames(MM.acc.fomm)<-names(lst.tr.comp)
+    lapply(1:length(lst.tr.comp),function(ind.paz){
+      true.tr<-lst.tr.comp[[ind.paz]]
+      pred.tr<-lst.tr.pred.comp[[ind.paz]]
+      fomm.tr<-lst.tr.fomm.comp[[ind.paz]]
+      paz<-names(lst.tr.comp)[ind.paz]
+      print(paz)
+      if(length(true.tr)<ncol(MM.acc)){
+        riga<-c(true.tr==pred.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
+        riga.fomm<-c(true.tr==fomm.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
+
+      }else{
+        riga<-true.tr==pred.tr
+        riga.fomm<-true.tr==fomm.tr
+      }
+
+      # for(ev in c(1:(length(true.tr-1)))){
+       MM.acc[paz,]<<-riga
+       MM.acc.fomm[paz,]<<-riga.fomm
+    })
+
+    n.cells<-(dim(MM.acc)[1]*dim(MM.acc)[2])-length(which(is.na(MM.acc)))
+    performances<-list("fomm"=(sum(MM.acc.fomm,na.rm = T)/n.cells),"pred"=(sum(MM.acc,na.rm = T)/n.cells))
+
+
+    # MM.acc.fomm<-matrix(0,nrow =length(lst.tr),ncol = max(lengths(lst.tr)))
+    # rownames(MM.acc.fomm)<-names(lst.tr)
+    # lapply(1:length(lst.tr),function(ind.paz){
+    #   true.tr<-lst.tr[[ind.paz]]
+    #   fomm.tr<-lst.tr.fomm[[ind.paz]]
+    #   paz<-names(lst.tr)[ind.paz]
+    #   print(paz)
+    #   if(length(true.tr)<ncol(MM.acc)){
+    #     riga<-c(true.tr==fomm.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
+    #   }else{
+    #     riga<-true.tr==fomm.tr
+    #   }
+    #
+    #   # for(ev in c(1:(length(true.tr-1)))){
+    #   MM.acc.fomm[paz,]<<-riga
+    # })
+
+    # lst.tr<-lapply(tmp.ID.traces, function(paz){return(paz$trace)})
+    # lst.tr.pred<-lapply(tmp.ID.traces, function(paz){return(paz$trace.pred)})
+
+    MM.trace<-matrix(0,nrow =length(unique(unlist(lst.tr))),ncol = length(unique(unlist(lst.tr))))
+    colnames(MM.trace)<-unique(unlist(lst.tr))
+    rownames(MM.trace)<-unique(unlist(lst.tr))
+
+    MM.trace.pred<-MM.trace
+
+    for(i in seq(1,nrow(MM.trace))){
+     for(j in seq(1,ncol(MM.trace))){
+       if(i!=j){
+         # mat.val<-0
+         start.tr<-rownames(MM.trace)[i]
+         start.pred<-rownames(MM.trace.pred)[i]
+         to.tr<-colnames(MM.trace)[j]
+         to.pred<-colnames(MM.trace.pred)[j]
+
+         for(id in seq(1,length(lst.tr))){
+           print(id)
+           ind.start.tr<-which(lst.tr[[id]]==start.tr)
+           if(!identical(ind.start.tr,integer(0))){
+             if(max(ind.start.tr)<=(length(lst.tr[[id]])-1)){
+               next.ev<-lst.tr[[id]][ind.start.tr+1]
+             }else{
+               next.ev<-""
+               }
+             }else{
+            next.ev<-""
+            }
+
+           ind.start.pred<-which(lst.tr.pred[[id]]==start.pred)
+           if(!identical(ind.start.pred,integer(0))){
+             if(max(ind.start.pred)<=(length(lst.tr.pred[[id]])-1)){
+               next.ev.pred<-lst.tr.pred[[id]][ind.start.pred+1]
+               }else{
+               next.ev.pred<-""
+               }
+             }else{
+               next.ev.pred<-""
+             }
+
+           # next.ev<-lst.tr[[id]][ind.start.tr+1]
+
+           if(next.ev[1]==to.tr){MM.trace[i,j]<- MM.trace[i,j]+1}
+
+           if(next.ev.pred[1]==to.pred){MM.trace.pred[i,j]<-MM.trace.pred[i,j]+1}
+           print(MM.trace.pred[i,j])
+           }
+         }
+       }
+    }
+
+    MM.trace.perc<-MM.trace
+    MM.trace.pred.perc<-MM.trace.pred
+    MM.perc.tmp<-lapply(1:nrow(MM.trace), function(riga){
+      MM.trace.perc[riga,which(MM.trace[riga,]!=0)]<<-MM.trace[riga,which(MM.trace[riga,]!=0)]/sum(MM.trace[riga,])
+      MM.trace.pred.perc[riga,which(MM.trace.pred[riga,]!=0)]<<-MM.trace.pred[riga,which(MM.trace.pred[riga,]!=0)]/sum(MM.trace.pred[riga,])
+    })
+
+    if(on.global){
+      val.graph<-build.graph.from.table(MM = obj.out$MMatrix.perc,threshold = 0.02,pred.graph = F,val.plot = T,MM.trace.perc = MM.trace.perc )
+      val.graph.pred<-build.graph.from.table(MM = obj.out$MMatrix.perc,threshold = 0.02,pred.graph = F,val.plot = T,MM.trace.perc = MM.trace.pred.perc)
+    }else{
+      val.graph<-build.graph.from.table(MM =  MM.trace.perc,threshold = 0.02,pred.graph = F)
+      val.graph.pred<-build.graph.from.table(MM =  MM.trace.pred.perc,threshold = 0.02,pred.graph = F)
+    }
+
+
+
+
+    return(c("script.trace"=val.graph,"script.prediction"=val.graph.pred))
+
+  }
+
+  #===========================================================
+  # Plot cov vs Node
+  #===========================================================
+
+  covariate.heatmap<-function(lst.local.rep,eventNode,par.margin = c(2, 20, 8, 2),threshold.low = 0, threshold.hi = 0.5,cex = 0.5){
+    lst.heatMat<-lapply(lst.local.rep, function(mat.node.from){
+      print(mat.node.from)
+      if(!is.null(mat.node.from)){
+        ind.node.mod<-which(mat.node.from[,6]!="")
+
+        if(length(ind.node.mod)!=0){
+          arr.cov<-unique(unlist(strsplit(mat.node.from[ind.node.mod,6],split = " ")))
+          MM<-matrix(0,nrow = length(arr.cov),ncol = length(ind.node.mod) )
+          colnames(MM)<-mat.node.from[ind.node.mod,2]
+          rownames(MM)<-arr.cov
+
+          for(i in seq(1,ncol(MM))){
+            ev.goal<-colnames(MM)[i]
+            cov<-unlist(strsplit(mat.node.from[which(mat.node.from[,2]==ev.goal),6]," "))
+            pval<-as.numeric(unlist(strsplit(mat.node.from[which(mat.node.from[,2]==ev.goal),5]," ")))
+
+            for (j in seq(1,length(cov))) {
+              MM[which(rownames(MM)==cov[j]),i]<-pval[j]
+            }
+
+          }
+
+        }else{
+          MM<-NULL
+        }
+
+      }else{
+       MM<-NULL
+      }
+      return(MM)
+      })
+
+    names(lst.heatMat)<-names(lst.local.rep)
+    MM.Cross<-lst.heatMat[[eventNode]]
+
+    if(!is.null(MM.Cross)){
+      par(mar = par.margin)
+      image(t(MM.Cross),col = heat.colors(256) , axes=FALSE,oldstyle = F)
+      arr.posizioni <- (0.01:ncol(MM.Cross)/(ncol(MM.Cross)-1))
+      if(nrow(MM.Cross)==1){
+        arr.posizioni.row<-(0.05:nrow(MM.Cross))
+        axis(3, arr.posizioni, labels=colnames(MM.Cross),las=2,cex=0.3)
+        axis(2, arr.posizioni.row, labels=rownames(MM.Cross),las=2)
+        for( riga in 1:nrow(t(MM.Cross))) {
+          for( colonna in 1:ncol(t(MM.Cross))) {
+            valore <- t(MM.Cross)[riga,colonna]
+            if( valore >= threshold.low & valore <= threshold.hi ) {
+              text((riga-1)/(nrow(t(MM.Cross))-1),(colonna-1)/(ncol(t(MM.Cross))),format(valore,digits = 2) , cex=cex )
+            }
+          }
+        }
+      }else{
+        # arr.posizioni <- (0.01:ncol(MM.Cross)/(ncol(MM.Cross)-1))
+        arr.posizioni.row <- (0.05:nrow(MM.Cross)/(nrow(MM.Cross)-1))
+        axis(3, arr.posizioni, labels=colnames(MM.Cross),las=2,cex=0.3)
+        axis(2, arr.posizioni.row, labels=rownames(MM.Cross),las=2)
+        for( riga in 1:nrow(t(MM.Cross))) {
+          for( colonna in 1:ncol(t(MM.Cross))) {
+            valore <- t(MM.Cross)[riga,colonna]
+            if( valore >= threshold.low & valore <= threshold.hi ) {
+              text((riga-1)/(nrow(t(MM.Cross))-1),(colonna-1)/(ncol(t(MM.Cross))-1),format(valore,digits = 2) , cex=cex )
+            }
+          }
+        }
+      }
+
+
+    }
+
+
+    return(MM.Cross)
+
+
+  }
+
+
+
+
+
   #===========================================================
   # costructor
   # E' il costruttore della classe
   #===========================================================
-  costructor<-function( parametersFromInput = list() ) {
+  costructor<-function( parametersFromInput = list() , verboseMode) {
     MMatrix<<-''
     footPrint<<-''
     model.grViz<<-'';
     is.dataLoaded<<-FALSE
     parameters<<-parametersFromInput
     MMatrix.perc<<-NA
-    MMatrix.perc.noLoop<<-NA  
+    MMatrix.perc.noLoop<<-NA
     MMatrix.mean.time<<-NA
     MMatrix.density.list<<-NA
     MM.den.list.high.det<<-NA
@@ -905,9 +2642,10 @@ FOMM<-function( parameters.list = list() ) {
     obj.log<<-logHandler();
     setInstanceClass(className = "FOMM")
     global.personal.ID<<-paste( c(as.character(runif(1,1,100000)),as.character(runif(1,1,100000)),as.character(runif(1,1,100000))), collapse = '' )
+    param.verbose <<- verbose.mode
   }
   #===========================================================
-  costructor( parametersFromInput = parameters.list);
+  costructor( parametersFromInput = parameters.list, verboseMode = verbose.mode);
   #===========================================================
   return( list(
     "loadDataset"=loadDataset,
@@ -923,8 +2661,37 @@ FOMM<-function( parameters.list = list() ) {
     "build.PWF"=build.PWF,
     "findReacheableNodes"=findReacheableNodes,
     "KaplanMeier"=KaplanMeier,
-    "LogRankTest"=LogRankTest
-  ) )  
+    "LogRankTest"=LogRankTest,
+    "Predictive.model"=Predictive.model,
+    "Pred.mod.node"=Pred.mod.node,
+    "Predictive.PD"=Predictive.PD,
+    "grad.desc.fun"=grad.desc.fun,
+    "compute.gen.perf"=compute.gen.perf
+  ) )
 }
 
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
