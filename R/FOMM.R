@@ -1273,7 +1273,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
               train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
               test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
-              print(table(train_set$y))
+              if(param.verbose){print(table(train_set$y))}
 
               perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
               perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
@@ -1284,14 +1284,15 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               # if((table(train_set$y)[2]>nrow(train_set)*0.2) & (table(test_set$y))[2]>=1) continue<-FALSE
             }
 
-            print(paste("------>",table(train_set$y),"<------------"))
-            print(ind.train_set)
-
-
+            if(param.verbose){
+              print(paste("------>",table(train_set$y),"<------------"))
+              print(ind.train_set)
+              print("*******START STEPWISE**************")
+            }
 
             chosen.att<-c()
 
-            print("*******START STEPWISE**************")
+
 
             lst.stepwise<-lapply(1:n.att, function(att){
               if(param.verbose){
@@ -1387,7 +1388,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                     ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
                     train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
                     test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
-                    print(table(train_set$y))
+                    if(param.verbose){print(table(train_set$y))}
 
                     perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
                     perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
@@ -1481,7 +1482,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                             "b.accuracy"={
                               max.acc.test<-max(inner.fold$model_perf$roc_test$accuracy,na.rm = T)
                               max.acc.train<-max(inner.fold$model_perf$roc_train$accuracy,na.rm = T)
-                              print(paste0(max.acc.test*0.632+max.acc.train*0.368))
+
                               ret<-c(max.acc.test*0.632+max.acc.train*0.368,inner.fold$model_perf$roc_test$threshold[which(inner.fold$model_perf$roc_test$accuracy==max.acc)])
                             }
                     )
@@ -1681,7 +1682,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       sub.path=obj.out$pat.process[[id]]
       ind.eventStart<-which(sub.path[,obj.out$csv.EVENTName]==nodeStart)
       if(length(ind.eventStart)){
-        print(id)
+
         #caso in cui il paz di test sperimenta l'evento di start
         #inizio calcolando il suo y vero
         next.ev<-sub.path[,obj.out$csv.EVENTName][ind.eventStart+1]
@@ -1853,7 +1854,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
     switch (level,
       "local" = {
         lst.MM.report<-lapply(names(tmp), function(nodeStart){
-          print(nodeStart)
+
          if(best.thr[[nodeStart]][2]!=""){
            MM.report<-matrix("",nrow = length(names(tmp[[nodeStart]][[which(grid_search==best.thr[[nodeStart]][2])]]$list.pred)),ncol = 8)
            colnames(MM.report)<-c("nodeStart","nodeGoal","model","AUC","pval","covariate","id.0","id.1")
@@ -2010,7 +2011,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       pred.tr<-lst.tr.pred.comp[[ind.paz]]
       fomm.tr<-lst.tr.fomm.comp[[ind.paz]]
       paz<-names(lst.tr.comp)[ind.paz]
-      print(paz)
+
       if(length(true.tr)<ncol(MM.acc)){
         riga<-c(true.tr==pred.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
         riga.fomm<-c(true.tr==fomm.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
@@ -2068,7 +2069,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
     MM.pred[,2]<-unlist(lapply(lst.ID.test, function(lst.y){return(lst.y$y)}))
 
     for(i in c(1:nrow(MM.pred))){
-      print(i)
+
       if(MM.pred[i,1]==MM.pred[i,2]){
         MM.pred[i,3]=1
       }else{
@@ -2152,7 +2153,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       pred.tr<-lst.tr.pred.comp[[ind.paz]]
       fomm.tr<-lst.tr.fomm.comp[[ind.paz]]
       paz<-names(lst.tr.comp)[ind.paz]
-      print(paz)
+
       if(length(true.tr)<ncol(MM.acc)){
         riga<-c(true.tr==pred.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
         riga.fomm<-c(true.tr==fomm.tr,rep(NA,(ncol(MM.acc)-length(true.tr))))
@@ -2207,7 +2208,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
          to.pred<-colnames(MM.trace.pred)[j]
 
          for(id in seq(1,length(lst.tr))){
-           print(id)
+
            ind.start.tr<-which(lst.tr[[id]]==start.tr)
            if(!identical(ind.start.tr,integer(0))){
              if(max(ind.start.tr)<=(length(lst.tr[[id]])-1)){
@@ -2235,7 +2236,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
            if(next.ev[1]==to.tr){MM.trace[i,j]<- MM.trace[i,j]+1}
 
            if(next.ev.pred[1]==to.pred){MM.trace.pred[i,j]<-MM.trace.pred[i,j]+1}
-           print(MM.trace.pred[i,j])
+
            }
          }
        }
@@ -2269,7 +2270,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
   covariate.heatmap<-function(lst.local.rep,eventNode,par.margin = c(2, 20, 8, 2),threshold.low = 0, threshold.hi = 0.5,cex = 0.5){
     lst.heatMat<-lapply(lst.local.rep, function(mat.node.from){
-      print(mat.node.from)
+
       if(!is.null(mat.node.from)){
         ind.node.mod<-which(mat.node.from[,6]!="")
 
