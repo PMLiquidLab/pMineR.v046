@@ -1,4 +1,7 @@
-
+#' A classto build Synthetic Data
+#'
+#' @description  A class with many methods for synthetic data generation
+#' @export
 syntheticDataCreator<-function() {
   
   dado <- function( facce ) {

@@ -28,7 +28,7 @@ This is an implementation of the First Order Markov Model (firstOrderMarkovModel
                \item \code{findReacheableNodes( ) } and return the array containing the reacheable states, starting from the passed one.
                }
              In order to better undestand the use of such methods, please visit: www.pminer.info
-             
+
              The consturctor admit the following parameters:
 parameters.list a list containing possible parameters to tune the model.
 }
