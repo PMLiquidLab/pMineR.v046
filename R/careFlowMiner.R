@@ -1647,7 +1647,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   getNextEvent <- function( ID = "root", offsetDate = "" ) {
     Struttura.Dati <- getDataStructure()
     ID.possibiliFigli <- colnames(Struttura.Dati$MM)[which(Struttura.Dati$MM[ID,]!="")]
-    
+    # browser()
     if( length(ID.possibiliFigli) == 0 ) {
       return( list("row" = c(), "end" = TRUE, "event" = NA , "ID" = NA) )
     }
@@ -1657,14 +1657,10 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       winner.event <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento    
     }
     if( length(ID.possibiliFigli) > 1 ) {
-      numIPP <- unlist(lapply( ID.possibiliFigli, function(IDFiglio){
-        return(Struttura.Dati$lst.nodi[[  as.character(IDFiglio) ]]$hits)
-      } ))
-      numIPP <- numIPP / Struttura.Dati$lst.nodi[[ID]]$hits
-      cumSum.numIPP <- cumsum(numIPP)
-      dado <- runif(n = 1,min = 0,max = 1)
-      winner.pos <- which(cumSum.numIPP - dado > 0)[1]
-      winner.ID <- ID.possibiliFigli[ winner.pos ]
+      arr.possibili.figli <- unlist(lapply( 1:length(ID.possibiliFigli) , function(i.tmpID){ 
+        rep(  ID.possibiliFigli[i.tmpID], Struttura.Dati$lst.nodi[[ i.tmpID ]]$hits )
+      }))
+      winner.ID <- arr.possibili.figli[round(as.numeric(runif(n = 1,min = 1,max = length(arr.possibili.figli))))]
       winner.event <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento
     }
     
