@@ -8,7 +8,7 @@ syntheticDataCreator<-function() {
     return(as.integer(runif(1)*facce+1))
   }
   
-  cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001" ) {
+  cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001", giveBack = "csv" ) {
     data.partenza <- starting.date
 
     matrice <- c()
@@ -136,6 +136,13 @@ syntheticDataCreator<-function() {
       }
     }
     colnames(matrice) <- c("ID","Event","Date")
+    
+    if( giveBack == "dataLoader" ) {
+      objDL <- dataLoader(verbose.mode = FALSE)
+      objDL$load.data.frame(mydata = data.frame(matrice),IDName = "ID",EVENTName = "Event",dateColumnName = "Date",format.column.date = "%Y-%m-%d")
+      matrice <- objDL
+    }
+    
     return(matrice);
   }
   #===========================================================
