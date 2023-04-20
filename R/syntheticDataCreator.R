@@ -119,7 +119,7 @@ syntheticDataCreator<-function() {
       for( ct in seq(1,dado(8))) {
         
         vecchia.data <- as.Date(vecchia.data,"%d/%m/%Y") +  (180 - dado(120))  
-        matrice <- rbind( matrice, c(id , "MedicalVisit" , as.character(as.Date(vecchia.data,"%d/%m%/Y") )))      
+        matrice <- rbind( matrice, c(id , "Medical Visit" , as.character(as.Date(vecchia.data,"%d/%m%/Y") )))      
         
         pMorte <- pMorte + 0.1
         
