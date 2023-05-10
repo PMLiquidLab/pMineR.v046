@@ -1060,10 +1060,11 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   }
 
   #===========================================================
-  # Model Performances
+  # Model Performances:
+  # ev.param<- "AUC", "acc"
   #===========================================================
 
-  compute.perf.fun<-function(model, df){
+  compute.perf.fun<-function(model, df, ev.param= "acc",thr.acc=0.5){
     pred<-predict(model,newdata= df, type="response")
     df$y_prob<-pred
     df<-df[order(df$y_prob),]
@@ -1095,9 +1096,30 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
     dTPR <- c(0,diff(TPR))
     AUC <- sum(TPR * dFPR) + sum(dTPR * dFPR)/2
 
+
+
     #calcolo pval x att
     tab<-summary(model)
     pval<-tab$coefficients[,4][2:nrow(tab$coefficients)]
+
+    if(ev.param=="acc"){
+      df$y_pred[which(df$y_prob>thr.acc)]<-"1"
+
+      TP<-length(which(df$y=="1" & df$y_pred=="1"))
+      TN<-length(which(df$y=="0" & df$y_pred=="0"))
+      FP<-length(which(df$y=="0" & df$y_pred=="1"))
+      FN<-length(which(df$y=="1" & df$y_pred=="0"))
+      df_roc$accuracy<-(TP+TN)/(TP+TN+FP+FN)
+    }
+
+    # switch (ev.param,
+    #   "acc" = {
+    #     ev.value=acc
+    #   },
+    #   "AUC"= {
+    #     ev.value= AUC
+    #   }
+    # )
 
     return(list("df_roc" = df_roc,"AUC" = AUC,"pval"= pval))
   }
@@ -1108,7 +1130,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   # input: df_train, df_test, chosen.digit (for performaces approx), perf.train/perf.test (data on which compute perf)
   #===========================================================
 
-  train.FOMM.LR <- function( df_train,df_test=data.frame(),chosen.digit = 4,perf.train = TRUE,perf.test=TRUE) {
+  train.FOMM.LR <- function( df_train,df_test=data.frame(),chosen.digit = 4,perf.train = TRUE,perf.test=TRUE,ev.param="acc",thr.acc=0.5) {
     if(nrow(df_test)==0){
       perf.train=TRUE
       perf.test=FALSE
@@ -1117,15 +1139,15 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
    # df_train_tmp<-df_train[,2:ncol(df_train)]
     glm.fit<-glm( y ~ ., data=df_train_tmp, family= binomial(link = "logit"))
     if(perf.test & perf.train){
-      lst.perf.test<-compute.perf.fun(glm.fit,df_test)
-      lst.perf.train<-compute.perf.fun(glm.fit,df_train)
+      lst.perf.test<-compute.perf.fun(glm.fit,df_test,ev.param)
+      lst.perf.train<-compute.perf.fun(glm.fit,df_train,ev.param)
       to_ret<-list("model"=glm.fit,"roc_test"= lst.perf.test$df_roc,"pval_test"= lst.perf.test$pval,"AUC_test" = lst.perf.test$AUC,
                    "roc_train"= lst.perf.train$df_roc,"pval_train"=lst.perf.train$pval,"AUC_train"= lst.perf.train$AUC)
     }else if(perf.train & !perf.test){
-      lst.perf.train<-compute.perf.fun(glm.fit,df_train)
+      lst.perf.train<-compute.perf.fun(model = glm.fit,df = df_train,ev.param)
       to_ret<-list("model"=glm.fit,"roc_train"= lst.perf.train$df_roc,"pval_train"= lst.perf.train$pval,"AUC_train"= round(lst.perf.train$AUC,digits = chosen.digit))
     }else{
-      lst.perf.test<-compute.perf.fun(glm.fit,df_test)
+      lst.perf.test<-compute.perf.fun(glm.fit,df_test,ev.param)
       to_ret<-list("model"=glm.fit,"roc_test"= lst.perf.test$df_roc,"pval_test"= lst.perf.test$pval,"AUC_test"= round(lst.perf.test$AUC,digits = chosen.digit))
     }
 
@@ -1135,16 +1157,31 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   #===========================================================
   # LR model + FS function---> compute LR model.
   # oversamp.tec=> bootstrap, SMOTE
-  # perf.ind => AUC...
+  # perf.ind => AUC, acc
   # acc.ind => accuracy, b.accuracy
+  #
+  #
+  # OUTPUT: la funzione ritorna in output una lista che contiene:
+  #         - "run.check" <- parametro T/F che serve per capire se è stato possibile apprendere il modello (problemi di cardinalità)
+  #         - "res"       <- lista composta da:
+  #
+  #                                           - "$lst.models.fold": lista contenente un numero di elementi pari al numero di fold scelti per la cross fold (k)
+  #                                                                 ogni elemento contiene: - il modello calcolato dalla glm function
+  #                                                                                         - tabella x ROC su train
+  #                                                                                         - tabella x ROC su test
+  #                                                                                         - pvalue train, pval test, misura di performance train e test
+  #                                          - "$final.model"    : lista che contiene: - conteggio numero di pazienti y=1 e y=0 nel training set
+  #                                                                                    - modello appreso su tutto il training set e le sue performance di accuratezza
+  #                                          - "$mat.perf.total" : matrice con performance riassunte
   #===========================================================
 
   Predictive.model<-function(eventStart, eventGoal, arr.attributes, obj.out, arr.ID.train, arr.ID.test=c(), feature.selection=TRUE, k=1, p.train=0.7,
                              p.thr=0.05, n.att=2, n.digit.out=4, passing=c(), NOTpassing=c(), max.time=Inf, min.time=0, UM="days", pred.disc=FALSE,
-                             arr.cand=c(), oversamp.tec="bootstrap", perf.ind="AUC",acc.ind="accuracy",omit.missing=F){
+                             arr.cand=c(), oversamp.tec="bootstrap", perf.ind="acc",acc.ind="accuracy",omit.missing=F,ev.param="acc",thr.acc=0.5){
 
     check.flag<-TRUE
 
+    #creo oggetto QOD che mi aiuterà a ricostuire le classi di appartenenza dei pazienti
     obj.QOD<- pMineR::QOD(UM = UM )
     obj.QOD$loadDataset(dataList = obj.out)
 
@@ -1162,7 +1199,8 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
         id.0<-obj.QOD$query(from = eventStart,to = "END",arr.NOTpassingThrough = c(eventGoal,NOTpassing),arr.passingThrough = passing, time.range = c(min.time,max.time))
       }
 
-    #check output query fun: controllo che gli id1 e id0 non siano nulli e che id1 siano almeno un TOT (quanto deve valere questo tot? probabilmente almeno quanto il K dello smote)
+    #check output query fun:
+    #controllo che gli id1 e id0 non siano nulli e che id1 siano almeno un TOT (quanto deve valere questo tot? probabilmente almeno quanto il K dello smote)
 
     if(length(which(is.na(id.1)))>1 || length(which(is.na(id.0)))>1 || length(id.1)<3){
       check.flag<-FALSE
@@ -1172,6 +1210,9 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
       #query ha restituito degli id
       ID<-c(id.1,id.0)
+
+      #creo il data set utile per il calcolo del modello:
+      #dunque un data set che associa ad ogni ID il valore delle covariate (registrate all'istante temporale in cui avviene nodeStart)
       tmp<-lapply(ID, function(id){
         att.val<-search_value(sub.path=obj.out$pat.process[[id]],eventStart,arr.attributes)
         if(id %in% id.1){
@@ -1185,6 +1226,8 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       df_tot<-as.data.frame(do.call("rbind",tmp))
       colnames(df_tot)<-c("ID",arr.attributes,"y")
 
+
+      #solo covariate numeriche
       for (i in c(1:length(arr.attributes))) {
         df_tot[,arr.attributes[i]]<-as.numeric(df_tot[,arr.attributes[i]])
       }
@@ -1198,28 +1241,26 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
         df_tot<-remove.miss.col(df_tot)$df.clean.col
       }
 
-      # # df_tot<-na.omit(df_tot)
       arr.attributes<-colnames(df_tot)[-which(colnames(df_tot) %in% c("ID","y"))]
 
-      if(n.att==Inf) n.att<-length(arr.attributes)
-
-
-      # if(nrow(df_tot[which(df_tot$ID %in% id.1),])<=3) df_tot<-NULL
-      # df_tot<-na.omit(df_tot)
+      if(n.att==Inf | n.att>length(arr.attributes)) n.att<-length(arr.attributes)
     }
 
 
-    #check righe di df_toto (post na.omit)
+    #check righe di df_toto (post na.omit): se OK allora passo alla suddivisione in train e test
     if(is.null(df_tot) || nrow(df_tot[which(df_tot$ID %in% id.1),])<=3 || is.na(arr.attributes)){
       check.flag<-FALSE
       data_tot<-NULL
       to_ret<-list("res"=NULL,"run.check"=check.flag)
     }else{
-      #divisione train test:
+      #TRAIN
       df_train <-df_tot[which(df_tot$ID %in% arr.ID.train),]
 
-      #K=3 parametro SMOTE
-      if(table(df_train$y)[2]>3){
+      #check sullo sblinaciamento delle classi:
+      #prima controllo che il numero di pazienti sia superiore almeno a 3 (PARAMATRIZZARE!!!)
+      #poi controllo che il numero di pazienti y=0 sia superiore al 20% dei paz in classe Y=1:
+      #se questo non succede, applico tecnica di oversampling
+      if(table(df_train$y)[2]>3 & table(df_train$y)[1]>3){
         if(table(df_train$y)[2]<round(nrow(df_train)*0.2)){
           #calcolo di quanto deve aumentare la classe di minoranza affichè numero di 1 sia >20% tot
           switch (oversamp.tec,
@@ -1237,26 +1278,32 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                     df_train<-smote$data
                     colnames(df_train)[length(colnames(df_train))]<-"y"
                     df_train$y<-as.factor(df_train$y)
+                  },
+                  "none"={
+                    df_train<-df_train[,-1]
                   }
-          )
-
+                  )
         }else{
           df_train<-df_train[,-1]
         }
 
+        #TRAIN:
+        #potrebbe essere che non venga esplicitato un set di test
         if(is.null(arr.ID.test)){
           df_test<-data.frame()
         }else{
+
           df_test<-df_tot[which(df_tot$ID %in% arr.ID.test),]
-          if(table(df_test$y)[2]<nrow(df_test)*0.1){
-            d_size<-round(0.25*(table(df_test$y)[1]/table(df_test$y)[2]))
-            smote <- SMOTE(df_test[,-c(1,ncol(df_test))], df_test$y,dup_size = d_size,K = 3)
-            df_test<-smote$data
-            colnames(df_test)[length(colnames(df_test))]<-"y"
-            df_test$y<-as.factor(df_test$y)
-          }else{
-            df_test<-df_test[,-1]
-          }
+          df_test<-df_test[,-1]
+          # if(table(df_test$y)[2]<nrow(df_test)*0.1){
+          #   d_size<-round(0.25*(table(df_test$y)[1]/table(df_test$y)[2]))
+          #   smote <- SMOTE(df_test[,-c(1,ncol(df_test))], df_test$y,dup_size = d_size,K = 3)
+          #   df_test<-smote$data
+          #   colnames(df_test)[length(colnames(df_test))]<-"y"
+          #   df_test$y<-as.factor(df_test$y)
+          # }else{
+          #   df_test<-df_test[,-1]
+          # }
         }
 
 
@@ -1267,21 +1314,20 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               print(paste("k fold:",ind.fold.test))
             }
 
+            #suddivido il TRAINNG in TRAIN e VALIDATION
             p.strat<-round(table(df_train$y)[2]/sum(table(df_train$y)),digits = 2)
             continue<-TRUE
             while (continue) {
               ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
               train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
               test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
-              if(param.verbose){print(table(train_set$y))}
+              # if(param.verbose){print(table(train_set$y))}
 
               perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
               perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
 
-              # fattto check sulla stratificazione (((perc.test>=(p.strat-0.1)) & (perc.test<=(p.strat+0.05))))
+              # fatto check sulla stratificazione (((perc.test>=(p.strat-0.1)) & (perc.test<=(p.strat+0.05))))
               if( ((perc.train>=(p.strat-0.1)) & (perc.train<=(p.strat+0.1))) & (perc.test>0 & perc.test<1) ) continue<-FALSE
-
-              # if((table(train_set$y)[2]>nrow(train_set)*0.2) & (table(test_set$y))[2]>=1) continue<-FALSE
             }
 
             if(param.verbose){
@@ -1290,10 +1336,14 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               print("*******START STEPWISE**************")
             }
 
+
+            #applico stepwise per la scelta delle covariate:
+            #ciclo un numero di volte pari ad n.att sulle covariate che si vogliono inserire nel modello.
+            #alla prima iterata calcolo un modello con una sola covariata e dopo averle provate tutte, scelgo la covariata con p value più basso
+            #alla seconda itarata calcolo un nuovo modello composto da covariata scelta all'iterata precedente e ciascuna delle altre rimaste.
+            #scelgo come seconda covariata quella che garantisca che il pvalue della prima cov non scenda sotto il valore soglia (es.0.05) e con il pval più basso
+            #... vado vanti un numero di volte pari ad n.att
             chosen.att<-c()
-
-
-
             lst.stepwise<-lapply(1:n.att, function(att){
               if(param.verbose){
                 print(paste("n att:",att, "for fold test:", ind.fold.test))
@@ -1315,10 +1365,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               for (i in c(1:length(arr.att))) {
                 df.train<-subset(train_set,select = c(c(chosen.att,arr.att[i]),"y"))
                 df.test<-subset(test_set, select = c(c(chosen.att,arr.att[i]),"y"))
-                lst.perf[[i]]<-train.FOMM.LR(df.train,
-                                             df.test,
-                                             chosen.digit = 4,
-                                             perf.train = TRUE)
+                lst.perf[[i]]<-train.FOMM.LR(df_train = df.train,df_test = df.test, chosen.digit = 4,perf.train = TRUE,ev.param = ev.param,thr.acc)
 
                 pval[[i]]<-lst.perf[[i]]$pval_train
                 AUC[i]<-lst.perf[[i]]$AUC_test
@@ -1388,7 +1435,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                     ind.train_set<-sample(x=rownames(df_train),size = nrow(df_train)*p.train)
                     train_set<-df_train[which(rownames(df_train) %in% ind.train_set),]
                     test_set <-df_train[-which(rownames(df_train) %in% ind.train_set),]
-                    if(param.verbose){print(table(train_set$y))}
+                    # if(param.verbose){print(table(train_set$y))}
 
                     perc.train<-table(train_set$y)[2]/sum(table(train_set$y))
                     perc.test<-table(test_set$y)[2]/sum(table(test_set$y))
@@ -1403,7 +1450,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                   fold.to.check.mod <-train.FOMM.LR(df.train,
                                                     df.test,
                                                     chosen.digit = 4,
-                                                    perf.train = TRUE)
+                                                    perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
 
                   ret_list<-list("model_perf" =fold.to.check.mod,
                                    "class count"=table(test_set$y))
@@ -1422,6 +1469,9 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                 }
 
               }else{
+                # final.perf <-train.FOMM.LR(df_train = rbind(df.train,df.test),
+                #                            chosen.digit = 4, perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
+
                 to_ret<-lst.stepwise.final
               }
             }
@@ -1431,8 +1481,13 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
           names(lst.model)<-paste0("test.fold_",as.character(seq_along(1:k)))
 
+          # addestramento final model (modello costruito su tutto il training set con le covariate selzionate)
+
           if(length(which(lengths(lst.model)>0))>0){
+
             lst.model<-lst.model[which(lengths(lst.model)>0)]
+
+            #CASO HOLD OUT:
             if(k==1){
               best.att<-lst.model$test.fold_1$chosen_att
               best_acc_ind<-which(lst.model$test.fold_1$model_perf$roc_test$accuracy==max(lst.model$test.fold_1$model_perf$roc_test$accuracy))
@@ -1445,26 +1500,34 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               arr.acc<-NULL
               arr.AUC<-NULL
               mat.att.total<-mat.att
+
               if(nrow(df_test)==0){
-                final.models<-train.FOMM.LR(df_train[,c(best.att,"y")],
+                final.model<-train.FOMM.LR(df_train[,c(best.att,"y")],
                                             chosen.digit = 4,
-                                            perf.train = TRUE)
+                                            perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
               }else{
-                final.models<-train.FOMM.LR(df_train[,c(best.att,"y")],
+                final.model<-train.FOMM.LR(df_train[,c(best.att,"y")],
                                             df_test[,c(best.att,"y")],
                                             chosen.digit = 4,
-                                            perf.train = TRUE)
+                                            perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
               }
 
+              final.models<-list("final.model"=final.model,
+                   "count_train"=table(df_train$y),
+                   "count_test"=nrow(df_test)
+                   )
 
+            #CASO CROSS FOLD
             }else{
+
               best.att<-NULL
               add.col<-3
               mat.att<-matrix("",nrow = length(lst.model),ncol = n.att+add.col)
               mat.att.total<-matrix("",nrow = length(lst.model),ncol = n.att+4)
+
+
               for (i in c(1:length(lst.model))) {
                 chosen.att<-lst.model[[i]][[1]][[2]]
-
                 arr.AUC<-lapply(lst.model[[i]],function(inner.fold) {
                   #QUI METTO CONDIZIONI SE VOGLIO UN ALTRO SCORE DIVERSO DA AUC.MEAN
                   return(inner.fold$model_perf$AUC_test)
@@ -1474,6 +1537,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                   #accuratezza cambiare qui
                   if(!is.null(inner.fold$model_perf)){
 
+                    #metrica di accuratezza per il calcolo del migliore dei k modelli allenati nella cross fold (viene scelto quello con il parametro di accuratezza maggiore)
                     switch (acc.ind,
                             "accuracy" = {
                               max.acc<-max(inner.fold$model_perf$roc_test$accuracy,na.rm = T)
@@ -1529,18 +1593,20 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
               col_to_del<-lapply(1:(ncol(mat.att.total)-add.col-1), function(colonna){
                 if(length(which(mat.att.total[,colonna]==""))==nrow(mat.att.total)) to_del<-colonna
               })
+
+
               if(!is.null(unlist(col_to_del))) mat.att.total<-mat.att.total[,-unlist(col_to_del)]
 
               final.models<-lapply(1:length(lst.model), function(i){
                 if(nrow(df_test)==0){
                   final<-train.FOMM.LR(df_train[,c(lst.model[[i]][[1]][[2]],"y")],
                                        chosen.digit = 4,
-                                       perf.train = TRUE)
+                                       perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
                 }else{
                   final<-train.FOMM.LR(df_train[,c(lst.model[[i]][[1]][[2]],"y")],
                                        df_test[,c(lst.model[[i]][[1]][[2]],"y")],
                                        chosen.digit = 4,
-                                       perf.train = TRUE)}
+                                       perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)}
 
                 return(list("final.model"=final,
                             "count_train"=table(df_train$y),
@@ -1567,10 +1633,10 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
           }else{
             dfTest<-data.frame()
           }
-          final.model<-train.FOMM.LR(df_train[,c(arr.attributes,"y")],
-                                     dfTest,
+          final.model<-train.FOMM.LR(df_train = df_train[,c(arr.attributes,"y")],
+                                     df_test = dfTest,
                                      chosen.digit = 4,
-                                     perf.train = TRUE)
+                                     perf.train = TRUE,ev.param = ev.param,thr.acc = thr.acc)
           mat.att<-matrix(ncol = length(arr.attributes)+3)
           if(length(arr.ID.test)>1){
 
@@ -1587,7 +1653,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
                            final.model$roc_train[which(final.model$roc_train$accuracy==max(final.model$roc_train$accuracy)),"accuracy"][1],
                            final.model$roc_train[which(final.model$roc_train$accuracy==max(final.model$roc_train$accuracy)),"threshold"][1]
             )
-            colnames(mat.att)<-c(paste0("covariate_",seq_along(1:length(arr.attributes))),"AUC.on.train.fold","threshold","accuracy")
+            colnames(mat.att)<-c(paste0("covariate_",seq_along(1:length(arr.attributes))),"AUC.on.train.fold","accuracy","threshold")
           }
           arr.acc<-NULL
           arr.AUC<-NULL
@@ -1612,29 +1678,38 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   }
 
   #===========================================================
-  # predictiveProcessDiscovery
+  # predictiveProcessDiscovery: funzione che permette di calcolare per ogni nodo, il modello sui suoi archi
+  # INPUT: nodeStart         <- nodo sui cui archi si vuole calcolare il modello
+  # per i restanti input vedere compute.gen.perf function
+  #
   #===========================================================
 
-  Pred.mod.node<-function(arr.ID.train,nodeStart,feature.selection=T,k=5,arr.att,n.att,obj.out,all.graph=F,p.thr=0.05,omit.missing=F,vitro.test=F){
-
-
+  Pred.mod.node<-function(arr.ID.train,nodeStart,feature.selection=T,k=5,arr.att,n.att,obj.out,p.thr=0.05,omit.missing=F,vitro.test=F,ev.param="acc",thr.acc=0.5,oversamp.tec="none"){
+    #estraggo i nodi figli del nodo start a partire dalla MMatrix
     candidates<-colnames(obj.out$MMatrix)[which(obj.out$MMatrix[nodeStart,]!=0)]
+
+    #se il nodo ha più di un possibile nodo figlio passo a calcolare il modello per ogni arco
     if(length(candidates)>1){
       lst.pred.mod<-lapply(candidates,function(eventGoal){
         if(param.verbose) print(eventGoal)
+        #per ciascun nodo figlio di nodeStart (cioè per ogni elemento di candidates) calcolo modello:
         first.out<-Predictive.model(eventStart = nodeStart,eventGoal = eventGoal,
                                         obj.out = obj.out,arr.attributes = arr.att,
                                         arr.ID.train = arr.ID.train,
                                         arr.ID.test = c(),
                                         feature.selection = feature.selection,k = k,n.att = n.att,pred.disc = T,arr.cand = candidates,p.thr = p.thr,
-                                        omit.missing = omit.missing)
+                                        omit.missing = omit.missing,ev.param=ev.param,thr.acc=thr.acc,oversamp.tec = oversamp.tec)
+
         if(first.out$run.check){
           #modifico qui se voglio cambiare metrica per best model: nrow(first.out$res$mat.perf.total)==1 !!!!!!!
           if(!is.matrix(first.out$res$mat.perf.total) || !feature.selection){
-            to_ret<-first.out$res$final.model[[1]]
+            # to_ret<-first.out$res$final.model[[1]]
+            to_ret<-first.out$res$final.model
             if(vitro.test){
               to_ret<-list("best_model"=to_ret,"performances"=first.out$res$mat.perf.total)
             }
+          }else if(nrow(first.out$res$mat.perf.total)==1){
+            to_ret<-first.out$res$final.model
           }else{
             ind.best.model<-which(first.out$res$mat.perf.total[,"AUC.mean.folds"]==max(as.numeric(first.out$res$mat.perf.total[,"AUC.mean.folds"])))[1]
             to_ret<-first.out$res$final.model[[names(first.out$res$final.model)[ind.best.model]]]
@@ -1651,8 +1726,12 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
         })
       names(lst.pred.mod)<-candidates
       return_val<-lst.pred.mod
+
+      #se nodoStart ha un solo figlio allora restituisco in output solo la probabilità con cui dal nodo Start passo al nodo figlio
       }else if(length(candidates)==1){
         return_val<-obj.out$MMatrix.perc[nodeStart,candidates]
+
+        #se nodoStart non ha figli allora restituisco "END"
         }else{
           return_val<-"END"
         }
@@ -1664,10 +1743,10 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   # Process DIscovery all nodes
   #===========================================================
 
-  Predictive.PD<-function(arr.ID.train,feature.selection=T,k=5,arr.att,n.att,obj.out){
+  Predictive.PD<-function(arr.ID.train,feature.selection=T,k=5,arr.att,n.att,obj.out,ev.param="acc",thr.acc=0.5){
    all.node.mod<-lapply(row.names(obj.out$MMatrix), function(nodeStart){
      if(param.verbose) print(paste("EVENT START:",nodeStart))
-     Pred.mod.node(arr.ID.train = arr.ID.train, nodeStart = nodeStart, feature.selection = feature.selection, k = k,arr.att = arr.att ,n.att = n.att, obj.out = obj.out)
+     Pred.mod.node(arr.ID.train = arr.ID.train, nodeStart = nodeStart, feature.selection = feature.selection, k = k,arr.att = arr.att ,n.att = n.att, obj.out = obj.out,ev.param = ev.param,thr.acc = thr.acc)
    })
    names(all.node.mod)<-row.names(obj.out$MMatrix)
   }
@@ -1676,9 +1755,9 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   # Gradient descent function
   #===========================================================
 
-  grad.desc.fun<-function(arr.ID.test,nodeStart,obj.out,alpha.min=0.1,alpha.max=1,alpha.step=0.01, models, find.alpha=T,alpha.ratio=c(),comp.acc=TRUE){
+  grad.desc.fun<-function(arr.ID.test,nodeStart,obj.out,alpha.min=0.1,alpha.max=1,alpha.step=0.01, models, find.alpha=T,alpha.ratio=c(),comp.acc=TRUE,ev.param="acc",feat.flag=T){
     tmp<-lapply(arr.ID.test, function(id){
-
+      print(id)
       sub.path=obj.out$pat.process[[id]]
       ind.eventStart<-which(sub.path[,obj.out$csv.EVENTName]==nodeStart)
       if(length(ind.eventStart)){
@@ -1688,7 +1767,6 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
         next.ev<-sub.path[,obj.out$csv.EVENTName][ind.eventStart+1]
         for(i in c(1:length(next.ev))){
           if(is.na(next.ev[i]) & (ind.eventStart[i]+1)>nrow(sub.path)) next.ev[i]<-"END"
-
         }
 
 
@@ -1696,27 +1774,87 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
           ev<-next.ev[ind.ev]
           pred.mat<-matrix(NA,ncol = 3,nrow = length(names(models)))
           row.names(pred.mat)=names(models)
-          colnames(pred.mat)=c("y","y_prob","AUC")
+          colnames(pred.mat)=c("y","y_prob","perf")
           tmp<-lapply(1:nrow(pred.mat), function(riga){
+            print(riga)
 
             mod<-models[[rownames(pred.mat)[riga]]]
+            #caso in cui non ho appreso nessun modello
             if(length(mod)==1){
-
               pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
               mat.row<-c(ev,pred,pred)
-            }else{
-              model.cov<-names(mod$final.model$pval_train)
+
+              #in cui ho diretto final model
+            }else if(length(mod)==30){
+              model.cov<-names(mod$coefficients)[-1]
               att.val<-as.data.frame(search_value(sub.path=obj.out$pat.process[[id]],nodeStart,model.cov)[ind.ev,])
               colnames(att.val)<-model.cov
               if(length(which(is.na(att.val)))){
-
                 pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
                 mat.row<-c(ev,pred,pred)
               }else{
-                pred<-predict.glm(mod$final.model$model,newdata = att.val,type = "response")
+                pred<-predict.glm(mod,newdata = att.val,type = "response")
                 names(pred)=NULL
-                mat.row<-c(ev,pred,mod$final.model$AUC_train)
+                #aggiungo controllo metrica
+                switch (ev.param,
+                        "acc" = {
+                          mat.row<-c(ev,pred,"mod$final.model$roc_train$accuracy[1]")
+                        },
+                        "AUC"={
+                          mat.row<-c(ev,pred,"mod$final.model$AUC_train")
+                        }
+                )
+
               }
+
+              }else{
+                if(!feat.flag){
+                  model.cov<-names(mod$pval_train)
+                  att.val<-as.data.frame(search_value(sub.path=obj.out$pat.process[[id]],nodeStart,model.cov)[ind.ev,])
+                  colnames(att.val)<-model.cov
+
+                  if(length(which(is.na(att.val)))){
+
+                    pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
+                    mat.row<-c(ev,pred,pred)
+                  }else{
+                    pred<-predict.glm(mod$model,newdata = att.val,type = "response")
+                    names(pred)=NULL
+                    #aggiungo controllo metrica
+                    switch (ev.param,
+                            "acc" = {
+                              mat.row<-c(ev,pred,mod$roc_train$accuracy[1])
+                            },
+                            "AUC"={
+                              mat.row<-c(ev,pred,mod$AUC_train)
+                            }
+                    )
+
+                  }
+                }else{
+                  model.cov<-names(mod$final.model$pval_train)
+                  att.val<-as.data.frame(search_value(sub.path=obj.out$pat.process[[id]],nodeStart,model.cov)[ind.ev,])
+                  colnames(att.val)<-model.cov
+                  if(length(which(is.na(att.val)))){
+
+                    pred<-MMatrix.perc[nodeStart,rownames(pred.mat)[riga]]
+                    mat.row<-c(ev,pred,pred)
+                  }else{
+                    pred<-predict.glm(mod$final.model$model,newdata = att.val,type = "response")
+                    names(pred)=NULL
+                    #aggiungo controllo metrica
+                    switch (ev.param,
+                      "acc" = {
+                        mat.row<-c(ev,pred,mod$final.model$roc_train$accuracy[1])
+                      },
+                      "AUC"={
+                        mat.row<-c(ev,pred,mod$final.model$AUC_train)
+                      }
+                    )
+
+                  }
+
+                }
             }
             pred.mat[riga,]<<-mat.row
           })
@@ -1731,9 +1869,14 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
     })
 
     names(tmp)<-arr.ID.test
+    if(length(which(lengths(tmp)==0))>0){
+      lst.ID.test<-tmp[-which(lengths(tmp)==0)]
+    }else{
+      lst.ID.test<-tmp
+    }
 
 
-    lst.ID.test<-tmp[-which(lengths(tmp)==0)]
+
     if(length(lst.ID.test)>1){
       if(find.alpha){
         #costruisco la matrice degli alpha
@@ -1777,29 +1920,72 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
   #===========================================================
   # Compute.gen.perf: train global model
+  # INPUT: arr.ID <- patient ID array
+  #        prop.train <- proportion of training set
+  #        prop.test  <- proportion of test set
+  #        prop.param <- proportion of arr.ID used for hyper-param
+  #        k          <- number of fold for cross fold val (if k=1--> hold out)
+  #        arr.att    <- arr of attribute to consider as covariate
+  #        n.att      <- numero massimo di covariate da usare nel modello
+  #        grid_search=c(0.01,0.05,0.1,0.15) <- grid search x i pvalue
+  #        omit.missing=F,    <- uso na.omit per dati mancanti S/N
+  #        p.val.digit=4,     <- numero di cifre decimali pvalue
+  #        AUC.digit=3,       <- numero di cifre decimali AUC
+  #        best.perf=F,       <- flag per farsi restituire in output le performance dei migliori archi
+  #        n.best.arc=10      <- se best.arc=T decido di quanti "best archi" farmi restituire le performance
+  #        ev.param="acc"     <- tipo di indicatore di performace da utilizzare (acc or AUC)
+  #        thr.acc=0.5        <- soglia per il calcolo dell'accuratezza
+  #        oversamp.tec="none"<- tecnica di over sampling da applicare in caso di dati sbilanciati
+  #
+  #        HYPER-PARAM INPUT:
+  #        alpha.min=0.01     <-minimo valore del parametro alpha
+  #        alpha.max=1,       <- massimo val di alpha
+  #        alpha.step=0.01,   <- step con cui varia alpha nella grid search degli hyper param
   #===========================================================
 
-  compute.gen.perf<-function(arr.ID.train,arr.ID.test,feature.selection=T,k=5,arr.att,n.att,obj.out,alpha.min=0.01,alpha.max=1,alpha.step=0.01, grid_search=c(0.01,0.05,0.1,0.15),omit.missing=F,p.val.digit=4, AUC.digit=3){
-    test.hyper.param<-sample(arr.ID.test,size = length(arr.ID.test)*0.7)
-    test.param<-sample(test.hyper.param,size = length(test.hyper.param)*0.5)
-    test.final<-test.hyper.param[-which(test.hyper.param %in% test.param)]
-    test.val<-arr.ID.test[-which(arr.ID.test %in% c(test.param,test.final))]
+  compute.gen.perf<-function(arr.ID,prop.train,prop.test,prop.param,feature.selection=T,k=5,arr.att,n.att,obj.out,alpha.min=0.01,alpha.max=1,alpha.step=0.01, grid_search=c(0.01,0.05,0.1,0.15),omit.missing=F,p.val.digit=4, AUC.digit=3,best.perf=F,n.best.arc=10,ev.param="acc",thr.acc=0.5,oversamp.tec="none"){
 
-    # all.events<-rownames(obj.out$MMatrix)[-which(rownames(obj.out$MMatrix) %in% c("BEGIN","END","Onset","Start_trial"))]
+    #Suddividiamo la popolazione in training-test-trainging parametri
+    n.train.param<-length(arr.ID)*prop.param
+    n.train.set<-length(arr.ID)*prop.train
+    n.test.set<-length(arr.ID)*prop.test
+
+
+    arr.ID.tot<-as.character(sample(arr.ID))
+    arr.ID.train<-sample(arr.ID.tot,size = n.train.set)
+    train.param<-sample(arr.ID.tot[-which(arr.ID.tot %in% arr.ID.train)],size = n.train.param)
+    test.final<-arr.ID.tot[-(which(arr.ID.tot %in% c(train.param,arr.ID.train)))]
+
+
+    # train.param<-sample(arr.ID[-which()],size = length(arr.ID.train)*0.3)
+    # arr.ID.train<-arr.ID.train[-which(arr.ID.train %in% train.param)]
+    # test.final<-arr.ID.test
+
+    # test.hyper.param<-sample(arr.ID.test,size = length(arr.ID.test)*0.7)
+    # test.param<-sample(test.hyper.param,size = length(test.hyper.param)*0.5)
+    # test.final<-test.hyper.param[-which(test.hyper.param %in% test.param)]
+    # test.val<-arr.ID.test[-which(arr.ID.test %in% c(test.param,test.final))]
+
+
     all.events<-rownames(obj.out$MMatrix)[-which(rownames(obj.out$MMatrix) %in% c("BEGIN","END"))]
+
+    #per ciasun evento viene calcolato il modello sui suoi archi
     tmp<-lapply(all.events, function(nodeStart){
       if(param.verbose) print(paste("analyzing node:",nodeStart))
-      # acc_val<-c()
+
+      #per ogni valore soglia di p-value esplicitato nella grid search
       tmp.grid<-lapply(grid_search, function(p.thr){
         if(param.verbose) print(paste("analyzing node:",nodeStart, "p.thr",p.thr))
-        lst.pred<-Pred.mod.node(arr.ID.train = arr.ID.train,nodeStart = nodeStart,feature.selection = T,k = 5,arr.att = arr.att,n.att = 3,obj.out = obj.out,p.thr = p.thr,omit.missing = omit.missing)
+
+        lst.pred<-Pred.mod.node(arr.ID.train = arr.ID.train,nodeStart = nodeStart,feature.selection = feature.selection,k = k,
+                                arr.att = arr.att,n.att = n.att,obj.out = obj.out,p.thr = p.thr,omit.missing = omit.missing,ev.param = ev.param,thr.acc = thr.acc,oversamp.tec = oversamp.tec)
         if(length(lst.pred)==1 || lst.pred=="END" ||  length(which(lengths(lst.pred)==1))==length(lst.pred)){
           acc_val<-NULL
           lst.pred<-NULL
           alpha.ratio<-NULL
         }else{
-          alpha.ratio<-grad.desc.fun(test.param,nodeStart,obj.out,alpha.min=alpha.min,alpha.max=alpha.max,alpha.step=alpha.step, models= lst.pred)
-          acc_val<-grad.desc.fun(test.final,nodeStart,obj.out, models= lst.pred,find.alpha = F,alpha.ratio = as.numeric(alpha.ratio))
+          alpha.ratio<-grad.desc.fun(train.param,nodeStart,obj.out,alpha.min=alpha.min,alpha.max=alpha.max,alpha.step=alpha.step, models= lst.pred,ev.param = ev.param,feat.flag=feature.selection)
+          acc_val<-grad.desc.fun(test.final,nodeStart,obj.out, models= lst.pred,find.alpha = F,alpha.ratio = as.numeric(alpha.ratio),ev.param = ev.param,feat.flag=feature.selection)
           # acc_val<-cbind(acc_val,acc_val_tmp)
         }
         return(list("list.pred"=lst.pred,"acc_val"=acc_val,"p.val.thr"=p.thr,"alpha.ratio"=alpha.ratio))
@@ -1812,11 +1998,51 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
 
     names(tmp)=all.events
+    # save(tmp,file = "C:/Users/maria/Desktop/salvataggio_parziale.Rdata")
+    # save(test.final,file = "C:/Users/maria/Desktop/test_final_parziale.Rdata")
+    # save(train.param,file = "C:/Users/maria/Desktop/test_param_parziale.Rdata")
     # return(tmp)
     lst.local.report<-report.fun(list.model = tmp,level = "local",grid_search =grid_search,p.val.digit=p.val.digit, AUC.digit=AUC.digit,obj.out = obj.out)
-    global.report<-report.fun(list.model = tmp,level = "global",grid_search =grid_search,p.val.digit=p.val.digit, AUC.digit=AUC.digit,obj.out = obj.out)
-    performances<-validation.fun(arr.ID.val=test.val,obj.out=obj.out,lst.local.rep=lst.local.report, global.rep=global.report, grid_search=grid_search, lst.model=tmp)
-    ret_list<-list("model.list"=tmp,"local.rep"=lst.local.report,"global.rep"=global.report,"perf"=performances)
+    global.report<-report.fun(list.model = tmp,level = "global",grid_search =grid_search,p.val.digit=p.val.digit, AUC.digit=AUC.digit,obj.out = obj.out,test.final=test.final)
+    # performances<-validation.fun(arr.ID.val=test.val,obj.out=obj.out,lst.local.rep=lst.local.report, global.rep=global.report, grid_search=grid_search, lst.model=tmp)
+    ret_list<-list("model.list"=tmp,"local.rep"=lst.local.report,"global.rep"=global.report,"perf"=NULL)
+
+
+    if(best.perf){
+      best.arc.tab<-c()
+      tmp<-lapply(lst.local.report, function(tab.local.rep){
+        if(!is.null(tab.local.rep)){
+          print(tab.local.rep[1,1])
+          tab<-tab.local.rep[which(tab.local.rep[,"model"]!="used FOMM"),]
+          if(is.null(nrow(tab))){
+            best.arc.tab<<-rbind(best.arc.tab,tab)
+          }else{
+            if(nrow(tab)>0 & nrow(tab)<=n.best.arc){
+              best.arc.tab<<-rbind(best.arc.tab,tab)
+            }else if(nrow(tab)>n.best.arc){
+              AUC.vec<-sort(tab[,"AUC"],decreasing = T)
+              if(length(AUC.vec)<n.best.arc){
+                max.len<-length(AUC.vec)
+              }else{
+                max.len<-n.best.arc
+              }
+              best.arc.tab<<-rbind(best.arc.tab,tab[names(AUC.vec)[1:max.len],])
+            }
+
+          }
+
+
+
+        }
+
+
+      })
+      rownames(best.arc.tab)<-NULL
+      ret_list<-list("model.list"=tmp,"local.rep"=lst.local.report,"global.rep"=global.report,"best.tran"=best.arc.tab)
+    }
+
+
+
 
     return(ret_list)
   }
@@ -1825,7 +2051,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
   # Report.fun: generate report
   #===========================================================
 
-  report.fun<-function(list.model,level="local",grid_search,p.val.digit=4,AUC.digit=3,obj.out){
+  report.fun<-function(list.model,level="local",grid_search,p.val.digit=4,AUC.digit=3,obj.out,test.final=c()){
     tmp<-list.model
 
     ### CONTROLLARE BENE BEST.THR ACCURATEZZE
@@ -1840,7 +2066,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       alpha.param<-unlist(lst.alpha)
       if(is.null(acc)){
         to_ret<-c(1,"","")
-      }else if(length(which(is.na(acc)))>1){
+      }else if(length(which(is.na(acc)))>1 || is.na(acc)){
         to_ret<-c(NA,"","")
       }else{
 
@@ -1854,6 +2080,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
     switch (level,
       "local" = {
         lst.MM.report<-lapply(names(tmp), function(nodeStart){
+          print(nodeStart)
 
          if(best.thr[[nodeStart]][2]!=""){
            MM.report<-matrix("",nrow = length(names(tmp[[nodeStart]][[which(grid_search==best.thr[[nodeStart]][2])]]$list.pred)),ncol = 8)
@@ -1866,23 +2093,28 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
              arr.AUC<-lapply(names(list.pred), function(eventGoal){
 
+               #è 1 quando non ho modello
                if(length(list.pred[[eventGoal]])==1){
                  if(length(list.pred[[eventGoal]][[1]])!=1){
                    to_ret<-c(list.pred[[eventGoal]][[1]]$final.model$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$final.model$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$final.model$pval_train),collapse = " "))
                  }else{
-                   # list.pred[[eventGoal]]
                    to_ret<-c(list.pred[[eventGoal]],"","")
                  }
                }else{
+                 if(length(list.pred[[eventGoal]])==3){
+                   to_ret<-c(list.pred[[eventGoal]]$final.model$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$final.model$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$final.model$pval_train),collapse = " "))
+                 }else{
+                   to_ret<-c(list.pred[[eventGoal]]$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$pval_train),collapse = " "))
+                 }
 
                  # list.pred[[eventGoal]]$final.model$AUC_train
-                 to_ret<-c(list.pred[[eventGoal]]$final.model$AUC_train,paste(round(as.numeric(list.pred[[eventGoal]]$final.model$pval_train),digits = p.val.digit),collapse = " "),paste(names(list.pred[[eventGoal]]$final.model$pval_train),collapse = " "))
+
                }
              })
 
              arr.count<-lapply(names(list.pred), function(eventGoal){
+               #caso no modello
                if(length(list.pred[[eventGoal]])==1){
-
                  to_ret<-c("","")
                }else{
                  # list.pred[[eventGoal]]$final.model$AUC_train
@@ -1895,19 +2127,31 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
                  to_ret<-c("used FOMM")
                }else{
+
+                 if(length(lst.pred[[eventGoal]])==3){
+                   to_ret<-paste(list.pred[[eventGoal]]$final.model$model$call[1:3],collapse = " ")
+                 }else{
+                   to_ret<-paste(list.pred[[eventGoal]]$model$call[1:3],collapse = " ")
+                 }
                  # list.pred[[eventGoal]]$final.model$AUC_train
-                 to_ret<-paste(list.pred[[eventGoal]]$final.model$model$call[1:3],collapse = " ")
+
                }
              })
 
 
              MM.report[,"model"]<-unlist(model.sign)
              for(i in c(1:length(arr.AUC))){
+               print(i)
                MM.report[i,"AUC"]<-round(as.numeric(arr.AUC[[i]][1]),digits = AUC.digit)
                MM.report[i,"pval"]<-arr.AUC[[i]][2]
                MM.report[i,"covariate"]<-arr.AUC[[i]][3]
-               MM.report[i,"id.0"]<-arr.count[[i]][1]
-               MM.report[i,"id.1"]<-arr.count[[i]][2]
+               if(is.null(arr.count[[i]])){
+                 MM.report[i,"id.0"]<-""
+                 MM.report[i,"id.1"]<-""
+               }else{
+                 MM.report[i,"id.0"]<-arr.count[[i]][1]
+                 MM.report[i,"id.1"]<-arr.count[[i]][2]
+               }
 
              }
              table.to.ret<-as.table(MM.report)
@@ -1932,7 +2176,15 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
         MM.report<-matrix("",nrow = length(names(tmp)),ncol = 5)
         colnames(MM.report)<-c("NodeName","acc.FOMM","acc.LR","pval_thr","alpha.ratio")
         MM.report[,"NodeName"]<-names(tmp)
-        MM.report[,"acc.FOMM"]<-unlist(lapply(names(tmp), function(riga){return(max(obj.out$MMatrix.perc[riga,]))}))
+        arr.perf<-acc.FOMM(test.final,obj.out)
+        for (i in c(1:length(names(tmp)))) {
+          if(!is.na(arr.perf$arr.acc[names(tmp)[i]])){
+            MM.report[i,"acc.FOMM"]<-arr.perf$arr.acc[names(tmp)[i]]
+          }else{
+            MM.report[i,"acc.FOMM"]<-NA
+          }
+        }
+        # MM.report[,"acc.FOMM"]<-unlist(lapply(names(tmp), function(riga){return(max(obj.out$MMatrix.perc[riga,]))}))
         for (i in c(1:length(best.thr))) {
           MM.report[i,"acc.LR"]<-best.thr[[i]][1]
           MM.report[i,"pval_thr"]<-best.thr[[i]][2]
@@ -1943,11 +2195,51 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       }
     )
 
+
+
     return(to.ret.rep)
 
 
   }
-  #===========================================================
+
+
+  acc.FOMM<-function(test.final,obj.out){
+    objDL.train.out<-obj.out
+
+    objDL.test<-dataLoader()
+    objDL.test$load.data.frame(mydata = obj.out$original.CSV[which(obj.out$original.CSV[,obj.out$csv.IDName] %in% test.final),],IDName = obj.out$csv.IDName,EVENTName = obj.out$csv.EVENTName,dateColumnName = obj.out$csv.dateColumnName,format.column.date = obj.out$csv.date.format)
+    objDL.test.out<-objDL.test$getData()
+
+
+      lst.nodi <- list()
+      tmp <- lapply( 1:length(objDL.test.out$wordSequence.raw), function(indice) {
+        for( cursore in 1:(length(objDL.test.out$wordSequence.raw[[indice]])-1)) {
+          nodo.from <- objDL.test.out$wordSequence.raw[[indice]][cursore]
+          nodo.to <- objDL.test.out$wordSequence.raw[[indice]][cursore+1]
+
+          if( !(nodo.from %in% names(lst.nodi))) lst.nodi[[ nodo.from ]]  <<- c()
+          res <- 0
+          if( nodo.from %in% rownames(objDL.train.out$MMatrix.perc)) {
+            riga <- objDL.train.out$MMatrix.perc[ nodo.from , ]
+            nodo.destinatario.previsto <- names(riga[order(riga,decreasing = T)][1])
+            if( nodo.to == nodo.destinatario.previsto ) res <- 1
+          }
+          lst.nodi[[nodo.from]] <<- c( lst.nodi[[ nodo.from]] , res )
+        }
+      })
+
+      arr.perf <- unlist(lapply(1:length(lst.nodi),function(i){  return(  sum(lst.nodi[[i]])/length(lst.nodi[[i]])  )   }))
+      names(arr.perf) <- names(lst.nodi)
+      global.acc <- sum(unlist(lst.nodi))/length(unlist(lst.nodi))
+
+      return(
+        list( "global.list" = lst.nodi, "arr.acc" = arr.perf, "arr.global.acc" = global.acc )
+      )
+
+
+  }
+
+   #===========================================================
   # Prediction Accuracy function
   #===========================================================
 
@@ -2046,7 +2338,7 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
       fun.rank.out<-lapply(lst.pred.id$pred.mat, function(pred.mat){
         fun.rank<-lapply(1:nrow(pred.mat), function(riga){
           # to_ret<-alpha1*(as.numeric(lst.pred.id$pred.mat[riga,"y_prob"])+as.numeric(lst.pred.id$pred.mat[riga,"AUC"]))
-          to_ret<-alpha1*as.numeric(pred.mat[riga,"y_prob"])+alpha2*as.numeric(pred.mat[riga,"AUC"])
+          to_ret<-alpha1*as.numeric(pred.mat[riga,"y_prob"])+alpha2*as.numeric(pred.mat[riga,"perf"])
           return(to_ret)
         })
         names(fun.rank)<-rownames(pred.mat)
