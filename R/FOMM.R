@@ -1412,7 +1412,11 @@ FOMM<-function( parameters.list = list(),verbose.mode=F ) {
 
             })
 
-            print("***********END STEPWISE***************")
+            if(param.verbose){
+              print("***********END STEPWISE***************")
+            }
+
+
 
 
             names(lst.stepwise)<-paste0("att_",as.character(seq_along(1:n.att)))
