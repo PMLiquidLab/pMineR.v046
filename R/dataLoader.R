@@ -344,7 +344,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     clearAttributes( );
     param.column.names<<-colnames(mydata)
     # browser()
-    stocazzo <- mydata
+    # stocazzo <- mydata
     if( guessDataFormat == TRUE ) {
       ooo <- dateTimeWizard()
       format.column.date <- ooo$guess_datetime_format(arr.string = mydata[[dateColumnName]])
