@@ -440,7 +440,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   
   plotCFGraphComparison <- function( stratifyFor , stratificationValues=c(), stratificationThreshold = NA,
                                      arr.stratificationValues.A = c(), arr.stratificationValues.B = c(),
-                                     depth = 4, fisher.threshold = 0.1,
+                                     depth = 4, fisher.threshold = 0.5,
                                      checkDurationFromRoot = FALSE, 
                                      hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
                                      arr.States.color=c("Deces"="Red","intensive care"="Orange","Recovered"="YellowGreen"), 
@@ -478,7 +478,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   
   plot.comparison <- function( stratifyFor, stratificationValues, stratificationThreshold = NA,
                                arr.stratificationValues.A = c(), arr.stratificationValues.B = c(),
-                               fisher.threshold = 0.1, checkDurationFromRoot = FALSE,
+                               fisher.threshold = 0.05, checkDurationFromRoot = FALSE,
                                hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
                                starting.ID = "root", sequenza =c("root") , currentLevel = 0, 
                                depth = 4, arr.States.color=c(), GraphFontsize = "9" ,
@@ -616,8 +616,8 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
             fontColor <- "Black"
             arcColor <- "Black"
             
-            if( p.value < 0.05) fillColor <- "Yellow";
-            if( p.value < 0.01) fillColor <- "Yellow";
+            if( p.value < fisher.threshold) fillColor <- "Yellow";
+            if( p.value < fisher.threshold) fillColor <- "Yellow";
           } else {
             p.value = "NA"
             set.to.gray <- TRUE;
@@ -677,7 +677,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
             p.value <- p.value.fisher
             p.value <- as.numeric(format(p.value,digits = 3))
             
-            if( p.value < 0.05) fillColor <- "Yellow";
+            if( p.value < fisher.threshold) fillColor <- "Yellow";
             
             if( (morti.first + morti.second) < 10  ) {
               p.value = "NA"
@@ -782,8 +782,8 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
                 # browser()
                 p.value <- as.numeric(format(fisher.test(matriceFisher.leaf)$p.value,digits = 3))
                 
-                if( p.value < 0.05) fillColor <- "Yellow";
-                if( p.value < 0.01) fillColor <- "Yellow";
+                if( p.value < fisher.threshold) fillColor <- "Yellow";
+                if( p.value < fisher.threshold) fillColor <- "Yellow";
               } else {
                 p.value = "NA"
                 set.to.gray <- TRUE;
@@ -871,7 +871,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
                 "sonHits"= totaleSonHits))
   }
 
-  pathBeetweenStackedNodes <- function( fromState , toState, stratifyFor = "" , minPath = FALSE, stratificationValues , fisher.threshold = 0.1,
+  pathBeetweenStackedNodes <- function( fromState , toState, stratifyFor = "" , minPath = FALSE, stratificationValues , fisher.threshold = 0.05,
                                         kindOfGraph = "dot", arcColor = "black", arc.fontsize = 10, arc.fontcolor = "red",
                                         arr.States.color=c(), set.to.gray.color= "WhiteSmoke", p.value.threshold = 0.05,
                                         giveBackMatrix = FALSE ) {
