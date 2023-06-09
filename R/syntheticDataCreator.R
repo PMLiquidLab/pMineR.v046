@@ -7,6 +7,11 @@ syntheticDataCreator<-function() {
   dado <- function( facce ) {
     return(as.integer(runif(1)*facce+1))
   }
+  dado.time<-function(lower_bound,upper_bound){
+    # Genera un numero casuale da una distribuzione uniforme
+    random_number <- runif(1, min = lower_bound, max = upper_bound)
+    return(as.integer(random_number))
+  }  
   
   cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001", giveBack = "csv" ,
                       include.sex.attribute = FALSE) {
