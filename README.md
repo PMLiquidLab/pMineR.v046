@@ -13,10 +13,10 @@ If any errors about package dependencies appear, it is necessary to install the 
 
 Cause pMineR is an ecosystem of different tools, if you are new to it, we suggest to start reading the documentation in order, starting with the class *dataLoader()*. For a general overview, here there is a list of the most important classes:
 
-* Event Log Loading/Inspection/Manipulation : *dataLoader()*
-* Event Log Inspection/Querying : *QOD()*
-* Process Discovery : *firstOrderMarkovModel()*, *careFlowMiner*
-* Conformance Checking/Computer Interpretable Clinical Guidelines : *confCheck_easy()*
+* Event Log Loading/Inspection/Manipulation : **dataLoader()**
+* Event Log Inspection/Querying : **QOD()**
+* Process Discovery : **firstOrderMarkovModel()**, **careFlowMiner()**
+* Conformance Checking/Computer Interpretable Clinical Guidelines : **confCheck_easy()**
 
 
 ### 01 - dataLoader : Loading and Inspecting the Event Log
