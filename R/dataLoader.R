@@ -339,6 +339,9 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
   load.data.frame<-function( mydata, IDName, EVENTName, dateColumnName=NA, 
                              format.column.date = "%d/%m/%Y %H:%M:%S", 
                              convertUTF = TRUE, suppress.invalid.date = TRUE , guessDataFormat = FALSE) {
+    if( length(class(mydata)) > 1) stop("Please, set the input dataset to a data.frame")
+    if( class(mydata) == "matrix") mydata <- data.frame(mydata)
+    
     # clear all the attributes
     obj.Utils <- utils()
     clearAttributes( );

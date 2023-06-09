@@ -19,5 +19,7 @@ Cause pMineR is an ecosystem of different tools, if you are new to it, we sugges
 
 #### Loading/Inspecting the Event Log: the class *dataLoader*
 
-DataLoader is perhaps the most popular class in pMineR and one of the most useful. It is the interface class for Event Logs and is used to feed all the other classes. This is a *goog starting point* !
+DataLoader is perhaps the most popular class in pMineR and one of the most useful. It is the interface class for Event Logs and is used to feed all the other classes. This is a *good starting point* !
+
+http://www.pminer.info/progetti/pMineR/pMinShiny/docs/_book/index.html
 
