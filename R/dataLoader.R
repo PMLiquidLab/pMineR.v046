@@ -56,6 +56,14 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
   addDictionary<-function( fileName, sep =',', dict.name='main' , column.event.name) {
     list.dictionary[[ dict.name ]] <<- read.csv(fileName,header = T,sep = sep)
     list.dict.column.event.name[[ dict.name ]] <<- column.event.name
+  }  
+  #=================================================================================
+  # addDictionary
+  #=================================================================================    
+  addDictionaryMatrix<-function( inputMatrix, dict.name='main' , column.event.name) {
+    if( class(inputMatrix) == "matrix" ) inputMatrix <- data.frame(inputMatrix)
+    list.dictionary[[ dict.name ]] <<- inputMatrix
+    list.dict.column.event.name[[ dict.name ]] <<- column.event.name
   }    
   #=================================================================================
   # getTranslation
@@ -104,7 +112,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     if(toReturn=="dataLoader"){
       if(param.verbose == TRUE) obj.LH$sendLog(" 2) Create a new dataLoader object  (this splits in many steps) :\n")
       # Istanzia un oggetto dataLoader che eridita il parametro "verbose"
-      daRestituire<-dataLoader()
+      daRestituire<-dataLoader(verbose.mode = param.verbose)
       daRestituire$load.data.frame(mydata = new.myData,
                                    IDName = param.IDName,EVENTName = param.EVENTName,
                                    dateColumnName = param.dateColumnName,format.column.date = "%d/%m/%Y %H:%M:%S")      
@@ -583,6 +591,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     "getData"=getData,
     "applyFilter"=applyFilter,
     "addDictionary"=addDictionary,
+    "addDictionaryMatrix"=addDictionaryMatrix,
     "getTranslation"=getTranslation,
     "plotPatientTimeline"=plotPatientTimeline,
     "getClass"=getClass

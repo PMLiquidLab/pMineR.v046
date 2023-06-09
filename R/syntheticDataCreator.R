@@ -8,9 +8,12 @@ syntheticDataCreator<-function() {
     return(as.integer(runif(1)*facce+1))
   }
   
-  cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001", giveBack = "csv" ) {
+  cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001", giveBack = "csv" ,
+                      include.sex.attribute = FALSE) {
     data.partenza <- starting.date
 
+    arr.sex.attribute <- c()
+    
     matrice <- c()
     for ( id in seq(1,numOfPat) ) {
       vecchia.data <- data.partenza
@@ -18,6 +21,8 @@ syntheticDataCreator<-function() {
       resezioneCompleta <- FALSE
       CHT <- FALSE
       RT <- FALSE
+      
+      arr.sex.attribute[as.character(id)] <- as.integer(runif(1,min = 0,max = 2))
       
       pMorte <- 0.11
       morto <- FALSE
@@ -135,7 +140,18 @@ syntheticDataCreator<-function() {
         
       }
     }
+
     colnames(matrice) <- c("ID","Event","Date")
+    
+    if( include.sex.attribute == TRUE) {
+      arr.sex <- unlist(lapply(unique(matrice[,"ID"]), function(ID){
+        return(rep( arr.sex.attribute[ID], length(which(matrice[,"ID"] == ID))))
+      }))
+      arr.sex[which(arr.sex==1)] <- "M"
+      arr.sex[which(arr.sex==0)] <- "F"
+      matrice <- cbind( matrice , "Sex" = arr.sex)
+    }
+
     
     if( giveBack == "dataLoader" ) {
       objDL <- dataLoader(verbose.mode = FALSE)
