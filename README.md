@@ -21,5 +21,11 @@ Cause pMineR is an ecosystem of different tools, if you are new to it, we sugges
 
 DataLoader is perhaps the most popular class in pMineR and one of the most useful. It is the interface class for Event Logs and is used to feed all the other classes. This is a *good starting point* !
 
+Here you can find information about
+
+* how to load an Event Log and explore the content
+* how to *filter* the Event Log or *remap* the eventusing dictionaries, to manipulate the data
+
+
 http://www.pminer.info/progetti/pMineRTutorialWebsite/01.dataLoader.html
 
