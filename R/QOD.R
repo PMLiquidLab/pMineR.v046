@@ -3,7 +3,7 @@
 #' @description   a QoD inspector class
 #' @export
 QOD <- function( UM = "" ) {
-
+  
   global.dataLoader <- c();
   global.UM <- ""
   
@@ -23,7 +23,7 @@ QOD <- function( UM = "" ) {
   #=================================================================================
   # query
   #=================================================================================
-  query <- function( from , to , complement = FALSE, time.range=c(0,Inf), step.range = c(1,Inf) , UM = NA, 
+  query <- function( from , to , complement = FALSE, time.range=c(0,Inf), step.range = c(1,Inf) , UM = NA,
                      arr.passingThrough = c(), arr.NOTpassingThrough = c(),
                      returnCompleteMatrix = FALSE) {
     forceCheck <- TRUE
@@ -45,7 +45,7 @@ QOD <- function( UM = "" ) {
       begin.line <- subMM[1,]; begin.line[ EventName ] <- "BEGIN"
       end.line <- subMM[nrow(subMM),]; end.line[ EventName ] <- "END"
       subMM <- rbind( begin.line, subMM ); subMM <- rbind( subMM, end.line )
-
+      
       arr.from <- which(subMM[[EventName]] == from)
       arr.to <- which(subMM[[EventName]] == to)
       
@@ -55,7 +55,7 @@ QOD <- function( UM = "" ) {
       
       MM <- expand.grid.unique(arr.from,arr.to)
       MM <- cbind(MM , rep(0,nrow(MM))); MM <- cbind(MM , rep(0,nrow(MM))); MM <- cbind(MM , rep(0,nrow(MM)))
-      tmp <- lapply(1:nrow(MM),function(riga) { 
+      tmp <- lapply(1:nrow(MM),function(riga) {
         MM[riga,3] <<- MM[riga,2] - MM[riga,1]
         MM[riga,4] <<- subMM$pMineR.deltaDate[ MM[riga,2] ] - subMM$pMineR.deltaDate[ MM[riga,1] ]
       })
@@ -74,7 +74,7 @@ QOD <- function( UM = "" ) {
         }
         if( sum(arr.NOTpassingThrough %in% subMM[[EventName]][ MM[riga,1]:MM[riga,2] ]) >0 )  {
           valido <- FALSE
-        }        
+        }
         # browser()
         MM[riga,"valid"] <- valido
       }
@@ -93,15 +93,15 @@ QOD <- function( UM = "" ) {
     
     res <- names( global.dataLoader$pat.process )[which(tmp.res==TRUE)]
     
-    if( complement == TRUE ) { 
+    if( complement == TRUE ) {
       res <- names(global.dataLoader$pat.process)[which( !(names(global.dataLoader$pat.process) %in% res))]
     }
     
     return(res)
-  } 
+  }
   #=================================================================================
   # path.count
-  #=================================================================================  
+  #=================================================================================
   path.count <- function( evtSequenceLength = 1, notMoreThanOnePerPatient = FALSE , fromBegin = TRUE ) {
     browser()
   }
@@ -126,12 +126,12 @@ QOD <- function( UM = "" ) {
       } )
     })
     aaa <- MM.Cross
-    tmp.1 <- lapply( 1:nrow(MM.Cross) , function(riga) { 
+    tmp.1 <- lapply( 1:nrow(MM.Cross) , function(riga) {
       MM.Cross[riga,] <<- MM.Cross[riga,] / MM.Cross[riga,riga]
     })
     
     
-    par(mar = par.margin) 
+    par(mar = par.margin)
     image(t(MM.Cross[nrow(MM.Cross):1,]),col = heat.colors(256) , axes=FALSE )
     arr.posizioni <- (0.1:ncol(MM.Cross)/(ncol(MM.Cross)-1))
     axis(2, arr.posizioni, labels=rownames(MM.Cross)[length(rownames(MM.Cross)):1],las=2)
@@ -140,15 +140,15 @@ QOD <- function( UM = "" ) {
       for( colonna in 1:ncol(MM.Cross)) {
         valore <- t(MM.Cross[ncol(MM.Cross)-colonna+1,riga])
         if( valore >= threshold.low & valore <= threshold.hi ) {
-          text((riga-1)/(nrow(MM.Cross)-1),(colonna-1)/(ncol(MM.Cross)-1),format(valore,digits = 2) , cex=cex ) 
+          text((riga-1)/(nrow(MM.Cross)-1),(colonna-1)/(ncol(MM.Cross)-1),format(valore,digits = 2) , cex=cex )
         }
       }
     }
-  }  
+  }
   #=================================================================================
   # plotTimeline
-  #=================================================================================  
-  plotTimeline <- function(  objDL.obj=c(), arr.ID = c(), max.time = Inf , UM = "days", arr.events = c(), 
+  #=================================================================================
+  plotTimeline <- function(  objDL.obj=c(), arr.ID = c(), max.time = Inf , UM = "days", arr.events = c(),
                              arr.evt.pch = c(), evt.pch.default.value = 3,
                              ID.on.y.label  = TRUE, y.label.cex = 0.7,
                              Time.on.x.label = TRUE, x.label.cex = 0.7,
@@ -173,7 +173,7 @@ QOD <- function( UM = "" ) {
     
     
     if( ID.ordering == TRUE) {
-      arr.ID <- arr.ID[order(unlist(lapply(arr.ID, function(ID)  {  max(objDL.out$pat.process[[ID]]$pMineR.deltaDate)   } )),decreasing = ID.ordering.desc)]  
+      arr.ID <- arr.ID[order(unlist(lapply(arr.ID, function(ID)  {  max(objDL.out$pat.process[[ID]]$pMineR.deltaDate)   } )),decreasing = ID.ordering.desc)]
     }
     
     x.offset <- 0; y.offset <- 0
@@ -194,7 +194,7 @@ QOD <- function( UM = "" ) {
     minThickness <- 5
     
     frameIt <- function( x , y ) {
-      abs.x.offset <- max.x * x.offset;  
+      abs.x.offset <- max.x * x.offset;
       m <- (max.x - abs.x.offset) / max.x
       x <- m * x + abs.x.offset
       return( c(x,y) )
@@ -234,7 +234,7 @@ QOD <- function( UM = "" ) {
       xy.1 <- frameIt( 0, (riga*minThickness) ); xy.2 <- frameIt( maxTime, (riga*minThickness) )
       points( x = c(xy.1[1],xy.2[1]), y = c(xy.1[2],xy.1[2]), col="lightgrey", type='l')
       
-      if( ID.on.y.label == TRUE ) { 
+      if( ID.on.y.label == TRUE ) {
         text( (max.x / 100 ), (riga*minThickness) , ID, cex = y.label.cex  )
       }
       
@@ -247,9 +247,9 @@ QOD <- function( UM = "" ) {
         }
       }
     })
-    tmp <- lapply(1:nrow(mtrPointsToPlot),function(i)  { 
-      points( x = mtrPointsToPlot[i,1] ,  y = mtrPointsToPlot[i,2] , pch = as.numeric(mtrPointsToPlot[i,3]), lwd=1, 
-              col=mtrPointsToPlot[i,4]  )   
+    tmp <- lapply(1:nrow(mtrPointsToPlot),function(i)  {
+      points( x = mtrPointsToPlot[i,1] ,  y = mtrPointsToPlot[i,2] , pch = as.numeric(mtrPointsToPlot[i,3]), lwd=1,
+              col=mtrPointsToPlot[i,4]  )
     })
     if( plot.legend == TRUE) {
       legend( legend.Pos, legend = arr.events, col =  arr.col, lty=1, lwd=2 , cex = legend.cex)
@@ -260,9 +260,9 @@ QOD <- function( UM = "" ) {
   #=================================================================================
   # plotTraceEvolution
   #=================================================================================
-  plotTraceEvolution <- function( objDL.out, holdEvts = FALSE , UM = "days" , max.t = Inf, 
-                             legend.Pos = "topright", plot.legend = TRUE, legend.cex = 0.8,
-                             arr.ID = c(), cumulative = FALSE, arr.events = c()) {
+  plotTraceEvolution <- function( objDL.out, holdEvts = FALSE , UM = "days" , max.t = Inf,
+                                  legend.Pos = "topright", plot.legend = TRUE, legend.cex = 0.8,
+                                  arr.ID = c(), cumulative = FALSE, arr.events = c()) {
     
     get.during.time <- function( loadedData , max.t , UM , holdEvts , arr.events) {
       
@@ -279,17 +279,17 @@ QOD <- function( UM = "" ) {
       
       arr.eventi <- arr.events
       if( length(arr.eventi)==0 ) {
-        arr.eventi <- unique(new_t[[tmpDLS$csv.EVENTName]])  
+        arr.eventi <- unique(new_t[[tmpDLS$csv.EVENTName]])
       }
       
       max.t <- min(max(new_t$pMineR.deltaDate) , max.t)
       
-      lst.valori <- list()  
+      lst.valori <- list()
       for(t in 1:max.t) {
         if( length(arr.ID) == 0 ) arr.ID <- names(tmpDLS$pat.process)
-        eventi.t <- unlist(lapply( arr.ID, function(IPP) { 
+        eventi.t <- unlist(lapply( arr.ID, function(IPP) {
           if( holdEvts == TRUE ) {
-            quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate <= (t*convUM)   )  
+            quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate <= (t*convUM)   )
           } else {
             quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate >= ((t-1)*convUM) & tmpDLS$pat.process[[IPP]]$pMineR.deltaDate <= ((t)*convUM)   )
           }
@@ -298,11 +298,11 @@ QOD <- function( UM = "" ) {
           
         }  ))
         
-        tbl.eventi.t <- table(eventi.t)  
+        tbl.eventi.t <- table(eventi.t)
         
         for(evento in arr.eventi) {
           if(evento %in% names(tbl.eventi.t)) {
-            lst.valori[[as.character(t)]][[evento]] <- tbl.eventi.t[evento]  
+            lst.valori[[as.character(t)]][[evento]] <- tbl.eventi.t[evento]
           } else  {
             lst.valori[[as.character(t)]][[evento]] <- 0
           }
@@ -318,7 +318,7 @@ QOD <- function( UM = "" ) {
     if( holdEvts == TRUE ) {
       WTF<- get.during.time(loadedData = objDL.out, UM = UM, max.t = max.t, holdEvts = holdEvts, arr.events = arr.events)
     } else {
-      WTF<- get.during.time(loadedData = objDL.out, UM = UM, max.t = max.t, holdEvts = holdEvts, arr.events = arr.events)  
+      WTF<- get.during.time(loadedData = objDL.out, UM = UM, max.t = max.t, holdEvts = holdEvts, arr.events = arr.events)
     }
     
     lst.valori.1 <- WTF$lst.valori
@@ -327,10 +327,10 @@ QOD <- function( UM = "" ) {
     arr.colore <- rainbow(n = length(arr.eventi.1)); names(arr.colore) <- arr.eventi.1
     for(i in 1:length(arr.eventi.1)) {
       evento <- arr.eventi.1[i]
-      y <- unlist(lapply(names(lst.valori.1), function(t) {  
-        lst.valori.1[[t]][[evento]] 
+      y <- unlist(lapply(names(lst.valori.1), function(t) {
+        lst.valori.1[[t]][[evento]]
       } ))
-
+      
       if( holdEvts == TRUE ) {
         y.max.val <- sum(unlist(lst.valori.1[[1]]))
         y.vals <- y/y.max.val; ylim <- c(0,1);ylab <- "%"
@@ -339,10 +339,10 @@ QOD <- function( UM = "" ) {
         y.vals <- y; ylim <- c(0,y.max.val); ylab <- "abs"
       }
       if( i == 1) {
-        plot( as.numeric(names(lst.valori.1)) ,y.vals, type='l', lwd=2,col=arr.colore[i], 
-              xlab=UM, ylab=ylab, ylim=ylim, main="traces evolution")  
+        plot( as.numeric(names(lst.valori.1)) ,y.vals, type='l', lwd=2,col=arr.colore[i],
+              xlab=UM, ylab=ylab, ylim=ylim, main="traces evolution")
       } else {
-        points( as.numeric(names(lst.valori.1)) , y.vals, type='l', lwd=2, col=arr.colore[i])  
+        points( as.numeric(names(lst.valori.1)) , y.vals, type='l', lwd=2, col=arr.colore[i])
       }
     }
     if( plot.legend == TRUE ) {
@@ -350,14 +350,144 @@ QOD <- function( UM = "" ) {
              col=arr.colore[1:length(arr.eventi.1)], lty=1, cex=legend.cex)
     }
     
-  }  
-
+  }
+  
+  #=================================================================================
+  # single cumulative compute : internal use
+  #=================================================================================
+  cumulative.fun<-function(tab.paz){
+    if(!is.matrix(tab.paz)){
+      ret<-NULL
+    }else{
+      measured.time <-as.numeric( tab.paz[,5])
+      if(length(measured.time)<2){
+        ret<-NULL
+      }else{
+        mes.time.dens <- density(measured.time,from=0)
+        # calculate the cumulative
+        cumulative.y.values <- cumsum(mes.time.dens$y )/max(cumsum(mes.time.dens$y ))
+        ret<-list("mes.time.dens"=mes.time.dens,"cumulative.y.values"=cumulative.y.values)
+      }
+      
+    }
+    return(ret)
+    
+  }
+  
+  #=================================================================================
+  # compute generale cumulative: allow also for stratification
+  #=================================================================================
+  cumulative.curve.compute<-function(from,to,UM=NA,
+                                     step.range = c(0,Inf),complement = FALSE,time.range = c(0,Inf) ,
+                                     arr.passingThrough = c() ,arr.NOTpassingThrough = c(), stratification.var=c(), plotIt=T,
+                                     perc=0.9,legend.pos="bottomright",set.lty=1,plot.title="",x.range=c(),x.interval=10){
+    query.res.sus<-query(from = from,to = to,UM = UM ,returnCompleteMatrix = T,step.range = step.range,complement = complement,
+                         time.range = time.range,arr.passingThrough = arr.passingThrough,arr.NOTpassingThrough = arr.NOTpassingThrough)
+    
+    stratVar<-lapply(1:nrow(query.res.sus), function(ind){
+      id.pat<-query.res.sus[ind,1]
+      ind.from<-query.res.sus[ind,2]
+      sub.path<-global.dataLoader$pat.process[[id.pat]]
+      
+      return(sub.path[1,stratification.var])
+    })
+    query.res.sus<-cbind(query.res.sus,unlist(stratVar))
+    
+    if(!is.null(stratification.var)){
+      strat.levels<-levels(factor(global.dataLoader$original.CSV[,stratification.var]))
+      
+      lst.cum.strat<-lapply(strat.levels, function(strat.lev){
+        lst.cum<-cumulative.fun(tab.paz = query.res.sus[which(query.res.sus[,ncol(query.res.sus)]==strat.lev),])
+        return(lst.cum)
+      })
+      
+      names(lst.cum.strat)<-strat.levels
+      
+    }else{
+      lst.cum.strat<-list()
+      lst.cum.strat[[1]]<-cumulative.fun(tab.paz = query.res.sus)
+    }
+    
+    if(plotIt){
+      
+      cumulative.plot(EventStart=from,EventEnd=to,lst.cum=lst.cum.strat,perc=perc,legend.pos=legend.pos,
+                      strat.level=strat.levels,UM=UM,set.lty=set.lty,
+                      plot.title=plot.title,x.range=x.range,x.interval=x.interval)
+    }
+    
+    return(lst.cum.strat)
+  }
+  
+  #=================================================================================
+  # create cumulative plot: internal use
+  #=================================================================================
+  
+  cumulative.plot<-function(EventStart,EventEnd,lst.cum,perc,legend.pos="bottomright",
+                            strat.level=c(),UM="days",set.lty=1,
+                            plot.title="",x.range=c(),x.interval=10){
+    
+    if(length(strat.level)>1){
+      lst.cum.strat<-lst.cum
+      max.x<-lapply(lst.cum.strat, function(lista){
+        if(!is.null(lista)){
+          massimo<-max(lista$mes.time.dens$x)
+        }else{
+          massimo<-NULL
+        }
+        
+        return(massimo)
+      })
+      if(is.null(x.range)){
+        range.x<-c(0,max(unlist(max.x)))
+      }else{
+        range.x<-x.range
+      }
+      
+      
+      col<-rainbow(length(lst.cum.strat))
+      for (i in c(1:length(lst.cum.strat))) {
+        if(!is.null(lst.cum.strat[[i]])){
+          if(i==1){
+            obj.plot<-plot(x = lst.cum.strat[[i]]$mes.time.dens$x, y = lst.cum.strat[[i]]$cumulative.y.values, type='l',
+                           xlab=UM, ylab="%", main = paste("time needed from",EventStart,"to",EventEnd,plot.title),
+                           col= col[i],lwd = 2,xlim=range.x,lty=set.lty,xaxp=c(0,range.x[2],x.interval)) +
+              abline(v=lst.cum.strat[[i]]$mes.time.dens$x[length(which((lst.cum.strat[[i]]$cumulative.y.values <= perc) == TRUE))],col='gray',lty=2) +
+              abline(h=0.9,col='red', lty=2)
+          }
+          
+          else{
+            obj.plot<-lines(x = lst.cum.strat[[i]]$mes.time.dens$x, y = lst.cum.strat[[i]]$cumulative.y.values, type='l', xlab=UM, ylab="%",
+                            main = paste("time needed from",EventStart,"to",EventEnd,plot.title), col= col[i], lwd=2,xlim=range.x,
+                            lty=set.lty,xaxp =c(0,range.x[2],x.interval)) +
+              abline(v=lst.cum.strat[[i]]$mes.time.dens$x[length(which((lst.cum.strat[[i]]$cumulative.y.values <= perc) == TRUE))],col='gray',lty=2) +
+              abline(h=0.9,col='red', lty=2)
+            
+            legend(legend.pos,legend = strat.level,col = col,lty=rep(1,length(strat.level)))
+          }
+        }
+      }
+    }
+    else{
+      soglia<-length(which((lst.cum[[1]]$cumulative.y.values <= perc) == TRUE))
+      if(is.null(x.range)){
+        range.x<-c(0,max(lst.cum[[1]]$mes.time.dens$x))
+      }else{
+        range.x<-x.range
+      }
+      obj.plot<-plot(x = lst.cum[[1]]$mes.time.dens$x, y = lst.cum[[1]]$cumulative.y.values, type='l', xlab=UM, ylab="%", main = paste("time needed from",EventStart,"to",EventEnd),xaxp =c(0,range.x[2],x.interval)) +
+        abline(v=lst.cum[[1]]$mes.time.dens$x[soglia],col='red',lty=2) +
+        abline(h=0.9,col='red', lty=2)
+      
+    }
+    return(obj.plot)
+  }
+  
   #=================================================================================
   # clearAttributes
   #=================================================================================
   clearAttributes<-function() {
     costructor( UM = UM );
-  }  
+  }
   #===========================================================
   # costructor
   # E' il costruttore della classe
@@ -376,7 +506,9 @@ QOD <- function( UM = "" ) {
     "query"=query,
     "eventHeatmap"=eventHeatmap,
     "plotTimeline"=plotTimeline,
-    "plotTraceEvolution"=plotTraceEvolution
+    "plotTraceEvolution"=plotTraceEvolution,
+    "cumulative.curve.compute"=cumulative.curve.compute,
+    "cumulative.fun"=cumulative.fun
     # "path.count"=path.count
   ) )
 }
