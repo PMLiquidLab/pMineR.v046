@@ -52,6 +52,18 @@ Here is an R Markdown that explains how to take the first steps
 
 http://www.pminer.info/progetti/pMineRTutorialWebsite/FOMM/FOMM.html
 
+### 05 - PWL: Conformance Checking and Computer Interpretable Guidelines – part 1
 
+A *Hello World* with PWL, a formalism born for representing simple Clinical Guidelines and make Conformance Checking.
 
+csv for test : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/csv/one.overview.csv
+XML with the process : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/XML-PWL/one.overview.xml
+Overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/PWL.1.html
 
+### 06 - PWL: Conformance Checking and Computer Interpretable Guidelines – part 1 
+
+A more complex Example with PWL :
+
+csv for test : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/csv/four.generated.csv
+XML with the process : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/XML-PWL/four.overview.xml
+Overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/PWL.2.html

@@ -420,7 +420,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     tmp <- lapply( names(list.computation.matrix$stati.timeline), function(ID){
       if( class(list.computation.matrix$stati.timeline[[ID]]) == "matrix") {
-          colnames(list.computation.matrix$stati.timeline[[ID]]) <<- c("event","event.status","eventDateTime","deltaTimeFromBegin")  
+          colnames(list.computation.matrix$stati.timeline[[ID]]) <<- c("node","node.status","eventDateTime","deltaTimeFromBegin")  
       }
     })
     
@@ -2260,7 +2260,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   }
   Time.To.Flight <- function( fromState, toState, 
                               passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
-                              stoppingNotAt=c(), PDVAt=c(), withPatientID=c() ) {
+                              stoppingNotAt=c(), PDVAt=c(), withPatientID=c(), UM = "mins" ) {
     
     # prendi i risultati dell'ultimo RUN
     res <- get.list.replay.result();
@@ -2288,7 +2288,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       }
       # -fm (2)
       # -im 
-      if(param.verbose == TRUE)  cat("\n ID=",ID)
+      # if(param.verbose == TRUE)  cat("\n ID=",ID)
       if( !(ID %in% names(res$list.computation.matrix$stati.timeline))) {
         toProcess <- FALSE; ID.skippati <- c( ID.skippati , ID ) 
       }
@@ -2400,15 +2400,21 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     aaa <- data.frame("ID"=tabellona[,1],"time"=as.numeric(tabellona[,2]),"outcome"=as.numeric(tabellona[,3]) )
     
+    if( UM == "mins")  moltiplicatore <- 1
+    if( UM == "hours") moltiplicatore <- 60
+    if( UM == "days")  moltiplicatore <- 60 * 24
+    if( UM == "weeks") moltiplicatore <- 60 * 24 * 7
+    aaa$time <- aaa$time / moltiplicatore
+    
     return( list( "TOF.table" = aaa, "error" = 0 ) )    
   }  
     
   KaplanMeier <- function( fromState, toState, 
                            passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
-                           stoppingNotAt=c(), PDVAt=c(),  withPatientID=c() )  {
+                           stoppingNotAt=c(), PDVAt=c(),  withPatientID=c(), UM = "mins" )  {
     
     TOF.list <- Time.To.Flight( fromState, toState, passingThrough, passingNotThrough, stoppingAt, 
-             stoppingNotAt, PDVAt, withPatientID )
+             stoppingNotAt, PDVAt, withPatientID, UM = UM )
     # browser()
     if (TOF.list$error != 0) {
       return(list("table"=NA, "KM"=NA, "ID"=NA, "error"=TOF.list$error ))
