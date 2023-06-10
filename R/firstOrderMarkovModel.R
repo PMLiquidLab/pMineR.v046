@@ -24,7 +24,7 @@
 #' @param parameters.list a list containing the parameters. The possible ones are: 'considerAutoLoop' and 'threshold'. 'considerAutoLoop' is a boolean which indicates if the autoloops have to be admitted, while 'threshold' is the minimum value that a probability should have to do not be set to zero, in the transition matrix.
 #' @import progress DiagrammeR
 #' @export
-firstOrderMarkovModel<-function( parameters.list = list() ) {
+firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE ) {
   MMatrix<-''
   footPrint<-''
   model.grViz<-'';
@@ -40,6 +40,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   istanceClass<-list()
   obj.log<-NA
   global.personal.ID<-NA
+  param.verbose.mode <- TRUE
 
   # ***************************************************************************************************
   # WRAPPING METHODS
@@ -160,7 +161,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     if(toReturn=="csv") { daRestituire <- res  }
     if(toReturn=="dataLoader"){
       # Istanzia un oggetto dataLoader che eridita il parametro "verbose"
-      daRestituire<-dataLoader()
+      daRestituire <- dataLoader( verbose.mode = param.verbose.mode )
       daRestituire$load.data.frame(mydata = res,
                                    IDName = "patID",EVENTName = "event",
                                    dateColumnName = "date",format.column.date = "%Y-%m-%d %H:%M:%S")
@@ -941,7 +942,8 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   # costructor
   # E' il costruttore della classe
   #===========================================================
-  costructor<-function( parametersFromInput = list() ) {
+  costructor<-function( parametersFromInput = list(), verbose.mode.in = verbose.mode ) {
+    param.verbose.mode <<- verbose.mode
     MMatrix<<-''
     footPrint<<-''
     model.grViz<<-'';
@@ -960,7 +962,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     global.personal.ID<<-paste( c(as.character(runif(1,1,100000)),as.character(runif(1,1,100000)),as.character(runif(1,1,100000))), collapse = '' )
   }
   #===========================================================
-  costructor( parametersFromInput = parameters.list);
+  costructor( parametersFromInput = parameters.list, verbose.mode.in = verbose.mode);
   #===========================================================
   return( list(
     "loadDataset"=loadDataset,

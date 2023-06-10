@@ -44,5 +44,14 @@ dataset : http://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/EL_CFM_Demo.
 
 *QOD()* overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD_tutorial.html
 
+### 03 - FOMM : Process Discovery via First Order Markov Model 
+
+The class *firstOrderMarkovModel()* is class for Process Discovery (probably the simplest).
+
+Here is an R Markdown that explains how to take the first steps
+
+http://www.pminer.info/progetti/pMineRTutorialWebsite/FOMM/FOMM.html
+
+
 
 
