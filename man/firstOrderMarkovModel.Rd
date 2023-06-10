@@ -4,7 +4,7 @@
 \alias{firstOrderMarkovModel}
 \title{A class to train First Order Markov Models}
 \usage{
-firstOrderMarkovModel(parameters.list = list())
+firstOrderMarkovModel(parameters.list = list(), verbose.mode = TRUE)
 }
 \arguments{
 \item{parameters.list}{a list containing the parameters. The possible ones are: 'considerAutoLoop' and 'threshold'. 'considerAutoLoop' is a boolean which indicates if the autoloops have to be admitted, while 'threshold' is the minimum value that a probability should have to do not be set to zero, in the transition matrix.}
