@@ -418,6 +418,12 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
     link.results <- WF.struct$linked.PWF.obj.computation.results
     
+    tmp <- lapply( names(list.computation.matrix$stati.timeline), function(ID){
+      if( class(list.computation.matrix$stati.timeline[[ID]]) == "matrix") {
+          colnames(list.computation.matrix$stati.timeline[[ID]]) <<- c("event","event.status","eventDateTime","deltaTimeFromBegin")  
+      }
+    })
+    
     return(list(
       "list.fired.trigger"=list.fired.trigger,
       "list.final.states"=list.final.states,
