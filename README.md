@@ -39,7 +39,9 @@ The class *QOD()* is another useful class. It was born to support Quality of Dat
 Here you can find an overview about the most significant features. The example exploits a dataset provided in the following link:
 
 dataset description : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD.testing.Dataset.Description.pdf
+
 dataset : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/EL_CFM_Demo.csv
+
 *QOD()* overview : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD_tutorial.html
 
 
