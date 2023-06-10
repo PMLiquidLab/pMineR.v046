@@ -21,7 +21,7 @@ Cause pMineR is an ecosystem of different tools, if you are new to it, we sugges
 
 ### 01 - dataLoader : Loading and Inspecting the Event Log
 
-DataLoader is perhaps the most popular class in pMineR and one of the most useful. It is the interface class for Event Logs and is used to feed all the other classes. This is a *good starting point* !
+*DataLoader()* is perhaps the most popular class in pMineR and one of the most useful. It is the interface class for Event Logs and is used to feed all the other classes. This is a *good starting point* !
 
 Here you can find information about
 
@@ -30,4 +30,17 @@ Here you can find information about
 
 
 http://www.pminer.info/progetti/pMineRTutorialWebsite/01.dataLoader.html
+
+
+### 02 - QOD : Checking/Querying the Data for Quality of Data Assessment
+
+The class *QOD()* is another useful class. It was born to support Quality of Data Analysis but it is also helppfull for Data inspection and data querying/transformation.
+
+Here you can find an overview about the most significant features. The example exploits a dataset provided in the following link:
+
+dataset description : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD.testing.Dataset.Description.pdf
+dataset : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/EL_CFM_Demo.csv
+*QOD()* overview : https://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD_tutorial.html
+
+
 
