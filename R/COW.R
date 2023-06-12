@@ -577,8 +577,6 @@ COW<-function(parameters.list = list()) {
     n.arr.eventi <<- NA
     wordSequence.raw <<- NA
     parameters<<-parametersFromInput
-    
-    
   }
   costructor(parametersFromInput = parameters.list)
   #=================================================================================
