@@ -779,7 +779,7 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
           # -fm
           
 
-          if (peso.rounded==0) {peso.rounded <- "<0.01"}
+          if(peso.rounded==0) {peso.rounded <- "<0.01"}
           penwidth<- peso*3 + 0.01
           if(penwidth<0.4) penwidth=0.4
           fontSize = 5+peso*9
