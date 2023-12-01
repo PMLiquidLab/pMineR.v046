@@ -440,7 +440,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   
   plotCFGraphComparison <- function( stratifyFor , stratificationValues=c(), stratificationThreshold = NA,
                                      arr.stratificationValues.A = c(), arr.stratificationValues.B = c(),
-                                     depth = 4, fisher.threshold = 0.5,
+                                     depth = 4, fisher.threshold = 0.05,
                                      checkDurationFromRoot = FALSE, 
                                      hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
                                      arr.States.color=c("Deces"="Red","intensive care"="Orange","Recovered"="YellowGreen"), 
@@ -602,7 +602,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
           }
         }
         if( is.na(wilcoxTest.p) ) wilcoxTest.p <- 1
-        # cat("\n", son)
+        # browser()
         # if( son %in% c("0","1","9","37","2") ) browser()
         # cat("\n FT: ",sum(matriceFisher[1,])," - ", ((sum(matriceFisher[2,])*fisher.threshold)) )
         if(checkDurationFromRoot == FALSE) {
