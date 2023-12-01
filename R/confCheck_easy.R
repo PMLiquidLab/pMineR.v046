@@ -49,6 +49,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
     # dopo aver caricato l'XML negli attributi, costruisci la struttura in memoria
     build.Workflow.model()
+    # browser()
+    a <- 444
   }
   #===========================================================
   # array.match
@@ -677,9 +679,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         }
         # Se hai rilevato qualche trigger attivo
         if(length(newHop$active.trigger)!=0)  {
+          # browser()
           # verifica che la lista dei nodi attivi ed trigger non siano gia' avvenuto Se no, rischio un loop infinito
           # Se non e' null, significa che e' gia' scattato in passato
-          if(!is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) {
+          
+          # -im -RG : tentativo goffo di impedire che si inchiodi quando length(last.fired.trigger)>1
+          if( length(last.fired.trigger)<2) {
+          # -fm
+            if(!is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) {
               for(tmptmptmp in names(list.to.avoid.inifinte.loop[[ last.fired.trigger ]])) {
                 # se la lunghezza e' uguale
                 if(length(list.to.avoid.inifinte.loop[[ last.fired.trigger ]][[tmptmptmp]]) == length(newHop$st.ACTIVE)) {
@@ -689,6 +696,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                   }
                 }
               }
+            }
           }
           if( sono.in.un.loop.infinito == FALSE ) {
             note.setEvent(eventType = '', eventDate = data.ev.NOW, pMineR.internal.ID.Evt = '' )

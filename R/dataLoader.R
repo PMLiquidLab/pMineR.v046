@@ -152,6 +152,8 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
                     ) {
     matriciona <- c()
     
+    if( is.debug == TRUE )  browser()
+    
     # Costruisci il super CSV
     if(param.save.memory == FALSE) CSV.completo <- original.CSV
     else CSV.completo <- do.call(rbind,  pat.process)
@@ -227,7 +229,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     if(!(whatToReturn %in% c( "itself" , "csv" ,"dataLoader" ) ) ) {
       obj.LH$sendLog( c(" 'whatToReturn can only be 'itself', 'csv' or 'dataLoader'! ")  ,"ERR"); return()
     }
-    
+    if( is.debug == TRUE ) browser()
     matriciona <- as.data.frame(ricalcolaCSV( array.events.to.remove = array.events.to.remove,
                                               array.events.to.keep = array.events.to.keep,
                                               array.pazienti.to.remove = array.pazienti.to.remove,
@@ -284,7 +286,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
   # raggruppa i dati, come sono da CSV in una maniera piu' consona ad essere analizzati
   #=================================================================================   
   groupPatientLogActivity<-function(mydata, ID.list.names) {
-    
+    # browser()
     # prendi la lista di pazienti e
     # per ogni paziente costruisci i gruppi 
     ID.list<-unique(mydata[[ID.list.names]])

@@ -7,13 +7,8 @@ COW<-function(parameters.list = list()) {
   arr.eventi <- NA
   n.arr.eventi <- NA
   wordSequence.raw <- NA
-  pat.process<-NA
-  
+  # pat.process<-NA
   plot.struct<-NA
-  
-  #parameters$paient.id : TRUE -> viene specificato l'ID del paziente
-  #                               a cui appartiene la traccia
-  #                       FALSE -> viene specidicato l'indice della traccia
   parameters<-list()
   
   #===========================================================
@@ -24,7 +19,7 @@ COW<-function(parameters.list = list()) {
     arr.eventi <<- out.objDL$arrayAssociativo[which(!(out.objDL$arrayAssociativo %in% c("BEGIN","END")))]
     n.arr.eventi <<- length(arr.eventi)
     wordSequence.raw <<- out.objDL$wordSequence.raw
-    pat.process<<-out.objDL$pat.process
+    # pat.process<<-out.objDL$pat.process
     
     # # dichiara che i dati sono stati caricati
     # is.dataLoaded<<-TRUE
@@ -438,6 +433,149 @@ COW<-function(parameters.list = list()) {
   }
   
   
+  plotTimeEvolution <- function( DL.out ,  arr.events , outcome, markedEvent=c(), main="" , xlim = c(), arr.ID = c(),
+                                 plotLegend = TRUE, 
+                                 outcome.override = TRUE,
+                                 lst.strat.cohorts = list(),
+                                 plotCumulativeToOutcome = FALSE, colCumulativeToOutcome = "yellow",
+                                 plotKaplanMeier = FALSE
+  ) {
+    if( length(lst.strat.cohorts) > 2) stop("max 2 cohorts are allowed, for stratification")
+    if( length(lst.strat.cohorts) > 0) {  arr.ID <- c( lst.strat.cohorts[[1]] , lst.strat.cohorts[[2]] ) }
+    if( length(arr.ID) == 0 ) arr.ID <- names(DL.out$pat.process)
+    if( length(markedEvent)==0 ) markedEvent <- outcome
+    objUtils <- utils()
+    arr.escalation <- arr.events
+    arr.col <- objUtils$get.IRON.Palette(alpha = 0.2, n = length(arr.escalation))
+    arr.col <- arr.col[length(arr.col):1]
+    arr.col <- arr.col[ 2:(length(arr.escalation)+2) ]
+    max.time <- max(unlist(lapply( 1:length(arr.ID), function(i) { max(DL.out$pat.process[[ arr.ID[i] ]]$pMineR.deltaDate)} ) ))  
+    max.time <- ceiling(max.time/(60*24))
+    if(length(xlim)==0) xlim <- c(0,max.time)
+    
+    ylim <- c(0,length(arr.escalation))
+    plot( c(), xlim = xlim, ylim = ylim ,xlab = "days", ylab = "" , yaxt="n", main= main)
+    for(i in 1:(length(arr.col)-1)) { rect(xlim[1],i-1,xlim[2],i,col=arr.col[i], border=NA) }
+    axis(2, at=(1:(length(arr.col)-1)-0.5), labels=arr.escalation, las=2) #, pos=, lty=, col=, las=, tck=, ...)
+    # arr.outcome.cols <- c("red","blue","yellow","green","brown","violet","purple","orange","salmon")[1:length(outcome)]
+    if( plotLegend == TRUE) {
+      legend("topright", inset=.05, title="Patients",
+             c(markedEvent, paste(c("NOT ",outcome),collapse = '')),fill=c("red","blue"), horiz=FALSE)
+    }
+    
+    ID.con.evento <- arr.ID[which(unlist(lapply(arr.ID,function(ID){ markedEvent %in% DL.out$pat.process[[ID]][[ DL.out$csv.EVENTName  ]]     })))]
+    ID.senza.evento <- arr.ID[which(!arr.ID %in% ID.con.evento)]
+    tempi.con.evento <- c()
+    tempi.senza.evento <- c() 
+    if( outcome.override == TRUE ) {
+      seq.ID <- c(ID.senza.evento , ID.con.evento)
+    } else {
+      seq.ID <- c(ID.con.evento , ID.senza.evento)    
+    }
+    divisore <- (60*24)
+    # scorri prima quelli senza evento per non rischiare di sovrapporre i colori ed uccidere la visibilita' dell'evento
+    arr.t.outcome.1 <- c()
+    for( ID in seq.ID ) {    
+      sequenza <- DL.out$pat.process[[ID]][[DL.out$csv.EVENTName]]
+      evt.subset <- which(sequenza %in% arr.events)
+      sequenza <- sequenza[evt.subset]
+      tempi <- DL.out$pat.process[[ID]]$pMineR.deltaDate[evt.subset]/divisore
+      int.sequenza <- unlist(lapply( 1:length(sequenza), function(i) { which(arr.escalation==sequenza[i])} ) )
+      # cat("\n ",ID)
+      # if( ID == "100981") browser()
+      colore <- ""
+      if( length(lst.strat.cohorts) > 1 ) {
+        if( ID %in% lst.strat.cohorts[[1]] & markedEvent %in% sequenza) { colore <- "red"; lwd=2 }
+        if( ID %in% lst.strat.cohorts[[2]] & markedEvent %in% sequenza) { colore <- "brown"; lwd=2 }  
+        if( ID %in% lst.strat.cohorts[[1]] & !(markedEvent %in% sequenza) ) { colore <- "blue"; lwd=2 }
+        if( ID %in% lst.strat.cohorts[[2]] & !(markedEvent %in% sequenza) ) { colore <- "deepskyblue"; lwd=2 }       
+      } else {
+        if( markedEvent %in% sequenza ) {colore <- "red"; lwd <- 2; 
+        arr.t.outcome.1 <- c( arr.t.outcome.1 , DL.out$pat.process[[ID]]$pMineR.deltaDate[which( sequenza == markedEvent )[1]]/divisore   )
+        }
+        if( !(markedEvent %in% sequenza) ) {colore <- "blue"; lwd <- 1}
+      }
+      points( tempi, int.sequenza-0.5 , type = 'l', col=colore, lwd = lwd)
+      points( tempi, int.sequenza-0.5, pch = 20, col=colore, lwd = lwd)
+    }
+    if(plotCumulativeToOutcome == TRUE) {
+      dens <- density(arr.t.outcome.1,from= min(xlim), to=max(xlim))
+      x <- dens$x
+      y <- cumsum(dens$y) / max( cumsum(dens$y))
+      y <- y * (max(ylim)-0.5)
+      points(x,y,type='l', lwd=2, col = colCumulativeToOutcome)
+    }
+    if(plotKaplanMeier == TRUE) {
+      stop("not yet implemented")
+    }
+  }
+  
+  jumpBackIndex <- function( objDL.out , arrEvt = c() ) {
+    evtName <- objDL.out$csv.EVENTName 
+    if( length(arrEvt) == 0 ) {
+      arrEvt <- objDL.out$arrayAssociativo[which(!(objDL.out$arrayAssociativo %in% c("BEGIN","END")))]
+    }
+    mtr.evt <- matrix(0,nrow=length(arrEvt),ncol=3)
+    colnames(mtr.evt) <- c("jback","count","Sjback")
+    rownames(mtr.evt) <- arrEvt
+    lst.ID.data <- list()
+    for( ID in names(objDL.out$pat.process) ) {
+      lst.ID.data[[ID]] <- list()
+      sequenza <- objDL.out$pat.process[[ID]][[ evtName ]]
+      arr.posizioni <- unlist(lapply(  sequenza , function(evento) {  which(  arrEvt == evento)  }   ))
+      arr.delta <- unlist(lapply(1:(length(arr.posizioni)-1), function(i) {  arr.posizioni[i+1]-arr.posizioni[i]   }   ))
+      arr.loopback <- !(arr.delta>=0)
+      arr.pat.jback <- c(); arr.pat.count <- c(); arr.pat.Sjback <- c()
+      if( TRUE %in% arr.loopback ) {
+        arr.T <- table(sequenza[1:length(arr.loopback)][arr.loopback])
+        for(toAdd in names(arr.T) ){
+          mtr.evt[ toAdd , "jback"] <- mtr.evt[ toAdd , "jback"] + as.numeric( arr.T[toAdd] ) 
+          arr.pat.jback <- c(arr.pat.jback , rep(toAdd , as.numeric( arr.T[toAdd] )) )
+        }
+      }
+      arr.T <- table(sequenza)
+      for(toAdd in names(arr.T) ){
+        mtr.evt[ toAdd , "count"] <- mtr.evt[ toAdd , "count"] + as.numeric( arr.T[toAdd] ) 
+        # arr.pat.count <- c(arr.pat.count , as.numeric( arr.T[toAdd] ) )
+      } 
+      arr.pat.count <- length(sequenza)
+      # strongLBack
+      # browser()
+      if( TRUE %in% unlist(lapply(1:(length(arr.loopback)-1),function(i){ ( !arr.loopback[i] & arr.loopback[i+1])  }))) {
+        arr.loopback <- c(!unlist(lapply(1:(length(arr.loopback)-1),function(i){ (arr.loopback[i] & arr.loopback[i+1])  })), FALSE ) & arr.loopback
+        # browser()
+        if( TRUE %in% arr.loopback ) {
+          arr.T <- table(sequenza[1:length(arr.loopback)][arr.loopback])
+          for(toAdd in names(arr.T) ){
+            mtr.evt[ toAdd , "Sjback"] <- mtr.evt[ toAdd , "Sjback"] + as.numeric( arr.T[toAdd] )
+            arr.pat.Sjback <- c( arr.pat.Sjback , rep( toAdd , as.numeric( arr.T[toAdd] )) )
+          }
+        }        
+      }
+      # if( length(arr.pat.jback) > length(arr.pat.Sjback)) browser()
+      lst.ID.data[[ID]]$arr.pat.jback <- arr.pat.jback
+      lst.ID.data[[ID]]$arr.pat.count <- arr.pat.count
+      lst.ID.data[[ID]]$arr.pat.Sjback <- arr.pat.Sjback            
+    }
+    
+    mtr.evt <- cbind(mtr.evt,"jbackIndex"=rep(0,nrow(mtr.evt)))
+    mtr.evt <- cbind(mtr.evt,"SjbackIndex"=rep(0,nrow(mtr.evt)))
+    mtr.evt <- cbind(mtr.evt,"jbackNormIndex"=rep(0,nrow(mtr.evt)))
+    mtr.evt <- cbind(mtr.evt,"SjbackNormIndex"=rep(0,nrow(mtr.evt)))        
+    for(riga in 1:nrow(mtr.evt)) {
+      mtr.evt[riga,"jbackIndex"] <- mtr.evt[riga,"jback"] / mtr.evt[riga,"count"]
+      mtr.evt[riga,"SjbackIndex"] <- mtr.evt[riga,"Sjback"] / mtr.evt[riga,"count"]      
+      mtr.evt[riga,"jbackNormIndex"] <- mtr.evt[riga,"jback"] / sum(mtr.evt[,"count"])
+      mtr.evt[riga,"SjbackNormIndex"] <- mtr.evt[riga,"Sjback"] / sum(mtr.evt[,"count"])      
+    }
+      
+    return( list( "mtr.evt" = mtr.evt,
+                  "sum.jbackNormIndex" = sum(mtr.evt[,"jbackNormIndex"]),
+                  "sum.SjbackNormIndex" = sum(mtr.evt[,"SjbackNormIndex"]),
+                  "lst.ID.data"=lst.ID.data
+                  )
+          )
+  }
   
   #=================================================================================
   # plotSequence: funzione di plot
@@ -456,120 +594,6 @@ COW<-function(parameters.list = list()) {
   }
   
   #=================================================================================
-  # plotSequence: funzione di plot
-  #=================================================================================
-  
-  KaplanMaier<-function(arr.id.path,eventGoal,arr.n.stories,UM="days"){
-    path1<-plot.struct$lst.MM.gruppi$seq.no.rep[[arr.id.path[1]]]
-    path2<-plot.struct$lst.MM.gruppi$seq.no.rep[[arr.id.path[2]]]
-    
-    if(!(eventGoal %in% path1) | !(eventGoal %in% path2)){
-      
-    }
-    if(!parameters$paient.id){
-      id.paz1<-names(wordSequence.raw)[arr.n.stories[plot.struct$gruppi[[paste(path1,collapse = "|&|&|&|")]]]]
-      id.paz2<-names(wordSequence.raw)[arr.n.stories[plot.struct$gruppi[[paste(path2,collapse = "|&|&|&|")]]]]
-    }else{
-      id.paz1<-arr.n.stories[plot.struct$gruppi[[paste(path1,collapse = "|&|&|&|")]]]
-      id.paz2<-arr.n.stories[plot.struct$gruppi[[paste(path2,collapse = "|&|&|&|")]]]
-      
-    }
-    
-    cens1<-c()
-    tmp1<-lapply(id.paz1, function(paz){
-      row.goal<-which(pat.process[[paz]]$Event==eventGoal)
-      if(length(row.goal)==0){
-        cens1<<-c(cens1,0)
-        delta.time1<-NA
-      }else{
-        cens1<<-c(cens1,1)
-        #sto prendendo il primo match con eventGoal: che fare se ho più eventi di tipo eventGoal??
-        delta.time1<-pat.process[[paz]]$pMineR.deltaDate[row.goal[1]]
-      }
-      return(delta.time1)
-    })
-    tempi1<-unlist(tmp1)
-    KMM1<-cbind(id.paz1,tempi1,cens1,rep("1",length(id.paz1)))
-    
-    cens2<-c()
-    tmp2<-lapply(id.paz2, function(paz){
-      row.goal<-which(pat.process[[paz]]$Event==eventGoal)
-      if(length(row.goal)==0){
-        cens2<<-c(cens2,0)
-        delta.time2<-NA
-      }else{
-        cens2<<-c(cens2,1)
-        #sto prendendo il primo match con eventGoal: che fare se ho più eventi di tipo eventGoal??
-        delta.time2<-pat.process[[paz]]$pMineR.deltaDate[row.goal[1]]
-      }
-      return(delta.time2)
-    })
-    tempi2<-unlist(tmp2)
-    KMM2<-cbind(id.paz2,tempi2,cens2,rep("2",length(id.paz2)))
-    
-    KM.MM<-rbind(KMM1,KMM2)
-    colnames(KM.MM)<-c("id","time","outcome","path")
-    
-    
-    if(!is.null(KM.MM)){
-      # browser()
-      matrice.KM<-as.data.frame(KM.MM)
-      
-      
-      
-      ####################### INIZIO MODIFICHE #####################################
-      if(class(matrice.KM$outcome)=="factor"){
-        matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
-      }else{
-        matrice.KM$outcome <- as.numeric(matrice.KM$outcome)
-      }
-      
-      if(class(matrice.KM$time)=="factor"){
-        matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
-      }else{
-        matrice.KM$time <- as.numeric(matrice.KM$time)
-      }
-      ##################### FINE MODIFICHE ###############################################
-      
-      
-      if( UM == "days") matrice.KM$time <- matrice.KM$time / 1440
-      if( UM == "hours") matrice.KM$time <- matrice.KM$time / 60
-      if( UM == "weeks") matrice.KM$time <- matrice.KM$time / (1440 * 7)
-      if( UM == "months") matrice.KM$time <- matrice.KM$time / (43800)
-      
-      KM<-survfit(Surv(time, outcome) ~ path, data = matrice.KM)
-      # plot.obj<-survminer::ggsurvplot(KM,
-      #                                 data = matrice.KM,
-      #                                 conf.int = TRUE,          # Add confidence interval
-      #                                 risk.table = TRUE,        # Add risk table
-      #                                 risk.table.height = 0.27,
-      #                                 risk.table.col = "strata", # Risk table color by groups
-      #                                 pval.method = T,
-      #                                 pval = T,xlab=paste0("Time (",UM,")")
-      # )
-      
-      test.out<-wilcox.test(matrice.KM[which(matrice.KM$outcome=="1" & matrice.KM$path=="1" ),"time"],
-                            matrice.KM[which(matrice.KM$outcome=="1" & matrice.KM$path=="2" ),"time"],
-                            paired = FALSE)
-      
-      
-      
-      # test.out<-wilcox.test(matrice.KM[which(matrice.KM$outcome=="1"),"time"] ~ matrice.KM[which(matrice.KM$outcome=="1"),"path"],
-      #                       data=matrice.KM[which(matrice.KM$outcome=="1"),],
-      #                       paired = FALSE)
-      
-      
-      
-      to_ret<-list("table"=matrice.KM, "KM"=KM, "ID"=matrice.KM$ID, "error"=0 , "plot"=plot.obj,"test.out"=test.out)
-      
-    }else{
-      to_ret<-NULL
-    }
-    
-  }
-  
-  
-  #=================================================================================
   # costructor
   #=================================================================================
   costructor<-function(parametersFromInput=list()) {
@@ -582,6 +606,8 @@ COW<-function(parameters.list = list()) {
   #=================================================================================
   return(list(
     "loadDataset"=loadDataset,
-    "plotSequence"=plotSequence
+    "plotSequence"=plotSequence,
+    "plotTimeEvolution"=plotTimeEvolution,
+    "jumpBackIndex"=jumpBackIndex
   ))
 }

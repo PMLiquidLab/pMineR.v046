@@ -14,7 +14,7 @@ syntheticDataCreator<-function() {
   }  
   
   cohort.RT<-function(numOfPat = 100, starting.date = "01/01/2001", giveBack = "csv" ,
-                      include.sex.attribute = FALSE) {
+                      include.sex.attribute = FALSE, p.censoring = 0) {
     data.partenza <- starting.date
 
     arr.sex.attribute <- c()
@@ -51,6 +51,7 @@ syntheticDataCreator<-function() {
         next
       }
       if(morto == TRUE) next
+      if( runif(n = 1) <= p.censoring) next
       
       # Biopsy
       vecchia.data <- as.Date(vecchia.data,"%d/%m/%Y") + dado(10)
@@ -64,6 +65,7 @@ syntheticDataCreator<-function() {
         next
       }  
       if(morto == TRUE) next
+      if( runif(n = 1) <= p.censoring) next
       
       # Surgery
       vecchia.data <- as.Date(vecchia.data,"%d/%m/%Y") + dado(20)
@@ -84,6 +86,7 @@ syntheticDataCreator<-function() {
         next
       }   
       if(morto == TRUE) next
+      if( runif(n = 1) <= p.censoring) next
       
       if(resezioneCompleta==TRUE) pMorte <- pMorte <- 0.15
       
@@ -105,6 +108,7 @@ syntheticDataCreator<-function() {
           pMorte <- pMorte - .02
           CHT <- TRUE
           if(morto == TRUE) next
+          if( runif(n = 1) <= p.censoring) next
         }
         
         # RT
@@ -122,6 +126,7 @@ syntheticDataCreator<-function() {
           pMorte <- pMorte - .03
           RT <- TRUE
           if(morto == TRUE) next
+          if( runif(n = 1) <= p.censoring) next
         }
       }
       
@@ -139,6 +144,7 @@ syntheticDataCreator<-function() {
           morto <- TRUE
         }
         if(morto == TRUE) break
+        if( runif(n = 1) <= p.censoring) break
         if( resezioneCompleta == TRUE ) pMorte <- pMorte - 0.03
         if( CHT == TRUE ) pMorte <- pMorte - 0.02
         if( RT == TRUE ) pMorte <- pMorte - 0.02
@@ -1015,6 +1021,44 @@ syntheticDataCreator<-function() {
     
     return(matrice);
   }
+  getABCSequence <- function( n.symbols = 5, arr.p.back = c() , n.crazy = 0, k.coeff = 2 ) {
+    arr.simboli.possibili <- c("ABCDEFGHILMNOPQRSTUVZ")
+    if( length(arr.p.back) == 0 ) {
+      arr.p.back <- runif(n = n.symbols , 0 , abs(rnorm(n = 1,mean = 0,sd = 0.2))   )
+    }
+    if( n.crazy > 0 ) {
+      quali <- sample( 1:length(arr.p.back), n.crazy)  
+      arr.p.back[quali] <- arr.p.back[quali] * k.coeff
+    }
+    arr.symb <- unlist(str_split(substr(arr.simboli.possibili,1,n.symbols),""))
+    
+    arr.traccia <- arr.symb[1]; posizione <- 1;
+    EndOfTrack <- FALSE
+    while( EndOfTrack == FALSE ) {
+      i <- which( arr.symb == arr.traccia[length(arr.traccia)]   )
+      
+      # jump back
+      if( runif(1) < arr.p.back[i] ) {
+        nuovaPosizione <- order(arr.p.back[1:posizione],decreasing = F)[1]
+        arr.traccia <- c( arr.traccia , arr.traccia[ nuovaPosizione ]  )
+        posizione <- nuovaPosizione
+      } else { 
+        # end of trace?
+        if( arr.traccia[length(arr.traccia)] == arr.symb[length(arr.symb)]  ) {
+          EndOfTrack <- TRUE  
+        } else {
+          # ok, move  to the next event
+          nuovaPosizione <- posizione + 1
+          arr.traccia <- c( arr.traccia , arr.symb[ (i + 1) ] )
+          posizione <- nuovaPosizione
+        }
+      }
+    }
+    return( list("arr.traccia" = arr.traccia , 
+                 "arr.symb" = arr.symb 
+                 ) 
+            )
+  }
   
   #===========================================================
   # costructor
@@ -1029,7 +1073,8 @@ syntheticDataCreator<-function() {
     "cohort.RT"=cohort.RT,
     "cohort.RT2"=cohort.RT2,
     "cohort.RT3"=cohort.RT3,
-    "cohort.RT4"=cohort.RT4    
+    "cohort.RT4"=cohort.RT4,
+    "getABCSequence"=getABCSequence
     )
   )
   

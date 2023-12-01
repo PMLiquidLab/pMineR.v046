@@ -385,27 +385,30 @@ QOD <- function( UM = "" ) {
                          time.range = time.range,arr.passingThrough = arr.passingThrough,arr.NOTpassingThrough = arr.NOTpassingThrough)
     
     stratVar<-lapply(1:nrow(query.res.sus), function(ind){
-      id.pat<-query.res.sus[ind,1]
-      ind.from<-query.res.sus[ind,2]
-      sub.path<-global.dataLoader$pat.process[[id.pat]]
+      id.pat <- query.res.sus[ind,1]
+      ind.from <- query.res.sus[ind,2]
+      sub.path <- global.dataLoader$pat.process[[id.pat]]
       
-      return(sub.path[1,stratification.var])
+      return(sub.path[ 1, stratification.var ])
     })
     query.res.sus<-cbind(query.res.sus,unlist(stratVar))
     
     if(!is.null(stratification.var)){
-      strat.levels<-levels(factor(global.dataLoader$original.CSV[,stratification.var]))
-      
+      if(is.factor(global.dataLoader$original.CSV[,stratification.var])) {
+        strat.levels<-levels(factor(global.dataLoader$original.CSV[,stratification.var]))        
+      } else {
+        strat.levels<-unique(global.dataLoader$original.CSV[,stratification.var])        
+      }
+
       lst.cum.strat<-lapply(strat.levels, function(strat.lev){
         lst.cum<-cumulative.fun(tab.paz = query.res.sus[which(query.res.sus[,ncol(query.res.sus)]==strat.lev),])
         return(lst.cum)
       })
-      
       names(lst.cum.strat)<-strat.levels
-      
     }else{
       lst.cum.strat<-list()
       lst.cum.strat[[1]]<-cumulative.fun(tab.paz = query.res.sus)
+      strat.levels=""
     }
     
     if(plotIt){

@@ -543,9 +543,11 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
   #===========================================================
   plot.delta.graph<-function( objToCheck, threshold=0, type.of.graph="overlapped",
                               threshold.4.overlapped=.3 ,giveBackGrViz = FALSE,
-                              plotIt = TRUE, returnDeltaMatrix = FALSE, layout = "dot", rankDirLR = FALSE) {
+                              plotIt = TRUE, returnDeltaMatrix = FALSE, layout = "dot", rankDirLR = FALSE, is.debug = FALSE) {
 
-    if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
+    if( type.of.graph != "overlapped" & type.of.graph !="delta") {stop("\n Not yet implemented: err.cod. %43547g8fd")}
+    
+    if( is.debug == TRUE) { browser() }
     ext.MM <- objToCheck$getModel(kindOfOutput = "MMatrix.perc")
     int.MM <- MMatrix.perc
 
@@ -569,7 +571,8 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
     if(type.of.graph=="overlapped")
       grafo<-build.graph.from.table(MM = m.int, threshold = threshold,
                                     second.MM = m.ext,
-                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph, layout = layout, rankDirLR = rankDirLR)
+                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph, 
+                                    layout = layout, rankDirLR = rankDirLR, is.debug = is.debug)
 
     if(plotIt==TRUE)   grViz(grafo);
     if(returnDeltaMatrix==TRUE) return( list("matrix"=matrice,"m.int"=m.int,"m.ext"=m.ext) );
@@ -729,10 +732,12 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
   #===========================================================
   # build.graph.from.table
   #===========================================================
-  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" , layout = "dot", rankDirLR = FALSE) {
+  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" , 
+                                   layout = "dot", rankDirLR = FALSE , is.debug = FALSE) {
 
-    if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
-
+    if( type.of.graph != "overlapped" & type.of.graph !="delta") { stop("\n Not yet implemented: err.cod. %43547g8fd") }
+    if( is.debug == TRUE ) { browser() }
+    
     # prendi la lista dei nomi
     listaNodi<-colnames(MM)
     # la lista dei nodi raggiungibili da BEGIN
@@ -756,11 +761,23 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
       listaNodiRiga<-listaNodi[which(MM[i,]>=threshold)]
       if(length(listaNodiRiga)>0) {
         for( ct in seq(1,length(listaNodiRiga))) {
+          
+          if(is.debug==TRUE) { cat("\n ct=",ct,"  i=",i) }
+          if( is.debug==TRUE & ct == 1 & i == 12) { browser() }
 
           peso<-as.numeric(MM[i, listaNodiRiga[ct]])
           peso.rounded <- round(peso, digits = 2)
-          denominatore <- sum(MMatrix[i, ])
-          numeratore <- MMatrix[i, listaNodiRiga[ct]]
+          # -im
+          # denominatore <- sum(MMatrix[i, ])
+          # if(listaNodiRiga[ct] %in% colnames(MMatrix) == TRUE) {
+          #   numeratore <- MMatrix[i, listaNodiRiga[ct]]  
+          # } else {
+          #   numeratore  <- 0
+          # }
+          denominatore <- sum(MM[i, ])
+          numeratore <- MM[i, listaNodiRiga[ct]]  
+          # -fm
+          
 
           if (peso.rounded==0) {peso.rounded <- "<0.01"}
           penwidth<- peso*3 + 0.01
