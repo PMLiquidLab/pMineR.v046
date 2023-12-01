@@ -806,7 +806,8 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
             }
           } else {
             if(peso > threshold) {
-              stringa.arco <- paste(c(numeratore,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
+              # stringa.arco <- paste(c( round(numeratore,digits = 2) ,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
+              stringa.arco <- paste(c( round(numeratore,digits = 2)),collapse = '')
               # stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso.rounded,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
               stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",stringa.arco,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
               arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
