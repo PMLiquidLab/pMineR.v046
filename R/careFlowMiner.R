@@ -873,6 +873,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
 
   pathBeetweenStackedNodes <- function( fromState , toState, stratifyFor = "" , minPath = FALSE, stratificationValues , fisher.threshold = 0.05,
                                         kindOfGraph = "dot", arcColor = "black", arc.fontsize = 10, arc.fontcolor = "red",
+                                        min.abs.threshold = 0,
                                         arr.States.color=c(), set.to.gray.color= "WhiteSmoke", p.value.threshold = 0.05,
                                         giveBackMatrix = FALSE ) {
     
@@ -944,7 +945,10 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       stringa.sequenza <- paste( lst.path[[i]], collapse = "->" )
       
       numero.ricorrenze <- as.numeric(kind.of.path[which( names(kind.of.path) == stringa.sequenza)])
-      if( stratify == TRUE ) {
+      
+      if( numero.ricorrenze < min.abs.threshold) next;
+      
+        if( stratify == TRUE ) {
         first.ricorrenza <- as.numeric(first.kind.of.path[which( names(first.kind.of.path) == stringa.sequenza)])
         second.ricorrenza <- as.numeric(second.kind.of.path[which( names(second.kind.of.path) == stringa.sequenza)])
         if(length(first.ricorrenza)==0) first.ricorrenza <- 0
