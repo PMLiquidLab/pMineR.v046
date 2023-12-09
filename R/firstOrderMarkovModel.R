@@ -229,7 +229,7 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
     aa[ which(aa<=threshold,arr.ind = T) ]<-0
     for( i in seq( 1 , nrow(aa)) ) {if(sum(aa[i,])>0)  {aa[i,]<-aa[i,]/sum(aa[i,]);} }
     MMatrix.perc<<-aa ; MMatrix<<-bb
-    grafo<-build.graph.from.table( MM = MMatrix.perc, threshold  = threshold)
+    grafo<-build.graph.from.table( MM = MMatrix.perc, threshold  = threshold , is.debug = debug.mode)
 
     model.grViz<<-grafo;
   }
@@ -732,7 +732,9 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
   #===========================================================
   # build.graph.from.table
   #===========================================================
-  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" , 
+  # build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "overlapped" , 
+  #                                  layout = "dot", rankDirLR = FALSE , is.debug = FALSE) {
+  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" ,
                                    layout = "dot", rankDirLR = FALSE , is.debug = FALSE) {
 
     if( type.of.graph != "overlapped" & type.of.graph !="delta") { stop("\n Not yet implemented: err.cod. %43547g8fd") }
@@ -776,6 +778,9 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
           # }
           denominatore <- sum(MM[i, ])
           numeratore <- MM[i, listaNodiRiga[ct]]  
+          
+
+          
           # -fm
           
 
@@ -805,9 +810,11 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
               }
             }
           } else {
+            denominatore.abs <- sum(MMatrix[i,])
+            numeratore.abs <- MMatrix[i,listaNodiRiga[ct]]
             if(peso > threshold) {
               # stringa.arco <- paste(c( round(numeratore,digits = 2) ,"/",denominatore,"\n( ",peso.rounded," )"),collapse = '')
-              stringa.arco <- paste(c( round(numeratore,digits = 2)),collapse = '')
+              stringa.arco <- paste(c( round(numeratore,digits = 2),"\n(",numeratore.abs,"/",denominatore.abs,")"),collapse = '')
               # stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso.rounded,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
               stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",stringa.arco,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')
               arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
