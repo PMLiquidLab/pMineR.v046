@@ -963,6 +963,8 @@ firstOrderMarkovModel<-function( parameters.list = list(), verbose.mode = TRUE )
 
     return( list("survdiff"=logRank , "survfit"=fitting) )
   }
+  
+  
   #===========================================================
   # costructor
   # E' il costruttore della classe
