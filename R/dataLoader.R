@@ -449,7 +449,16 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     arrayAssociativo<<-res$arrayAssociativo
     footPrint<<-res$footPrint
     MMatrix<<-res$MMatrix
-    pat.process<<-res$pat.process
+    # - im 
+    local.pat.process <- list()
+    local.pat.process$pat.process <- list()
+    tmp <- lapply(1:length(res$pat.process) , function(numID){ 
+      nome <- res$pat.process[[ numID ]][[ param.IDName ]][1]
+      local.pat.process$pat.process[[ as.character(nome) ]] <<- res$pat.process[[ numID ]]
+    } )
+    # pat.process<<-res$pat.process
+    pat.process<<-local.pat.process$pat.process
+    # - fm 
     wordSequence.raw<<-res$wordSequence.raw    
     MM.mean.time<<-res$MM.mean.time  
     MM.mean.outflow.time<<-res$MM.mean.outflow.time
@@ -471,6 +480,8 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     
     if(length(mydata)==0) { obj.LH$sendLog(c( "'",nomeFile,"' seems to be empty....\n" ),"ERR"); return() }
     if(dim(mydata)[2]==1) { obj.LH$sendLog(c( "'",nomeFile,"' seems to have only one column... check the separator!\n" ),"ERR"); return() }
+    
+    mydata <- cast.DF.to.char( mydata )
     
     # Now "load" the data.frame
     load.data.frame( mydata = mydata, IDName = IDName, EVENTName = EVENTName, 
@@ -555,6 +566,24 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
       segments( arr.delta.date[indice], ypts[indice], arr.delta.date[indice],0,col=col.stanga)
     }
   }   
+  
+  # piccola funzione che casta a char una colonna (array) passato
+  castToChar <- function( colonna ) {
+    if( class(colonna)=="factor") {
+      colonna <- as.character(levels(colonna)[colonna])    
+    }
+    return(colonna)
+  }
+  
+  
+  cast.DF.to.char <- function( DF ) {
+    for( colonna in colnames( DF ) ) {
+      DF[[colonna]] <- castToChar(DF[[colonna]])
+    }
+    return(DF)
+  }
+  
+  
   #=================================================================================
   # costructor
   #=================================================================================  
