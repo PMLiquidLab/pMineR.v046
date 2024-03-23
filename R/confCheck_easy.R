@@ -21,6 +21,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   global.arr.comandi.rilevati<-c()
   global.comp.cache<-list()         # cache per la computazione
   global.personal.ID<-NA
+  global.contatore<-0
   auto.detected.UM<-""              # Unita' di misura temporale rilevata
 
   #=================================================================================
@@ -49,7 +50,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
     # dopo aver caricato l'XML negli attributi, costruisci la struttura in memoria
     build.Workflow.model()
-    # browser()
     a <- 444
   }
   #===========================================================
@@ -177,7 +177,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       struttura.link <- list()
       
       if(length(tmp.lista.link)>0) { 
-        # browser()  
         arr.link.names <- unlist(xpathApply(tmp.lista.link[[1]],'//xml/workflow/trigger/link',xmlGetAttr,"name"))
         for(linkName in arr.link.names) {
           struttura.link[[linkName]]$name <- linkName
@@ -323,7 +322,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
           for( nome.stato in WF.struct$info$link$link_01$arr.states ) {
             # crea un oggetto confCheck_easy e carica lo PWF
             # (usando l'informazione sul suo path precedentemente caricata nella struttura')
-            # browser()
             WF.struct$linked.PWF.obj.computation.results[[nome.link]][[nome.stato]]<<-confCheck_easy()
             fileName <- WF.struct$info$link[[nome.link]]$fileName
             WF.struct$linked.PWF.obj.computation.results[[nome.link]][[nome.stato]]$loadWorkFlow(WF.fileName = fileName)
@@ -421,7 +419,11 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     link.results <- WF.struct$linked.PWF.obj.computation.results
     
     tmp <- lapply( names(list.computation.matrix$stati.timeline), function(ID){
-      if( class(list.computation.matrix$stati.timeline[[ID]]) == "matrix") {
+      # if( length(class(list.computation.matrix$stati.timeline[[ID]])) > 1 ) browser()
+      # -im claudio
+      if( "matrix" %in% class(list.computation.matrix$stati.timeline[[ID]]) ) {
+      # if( class(list.computation.matrix$stati.timeline[[ID]]) == "matrix") {
+      # -fm claudio
           colnames(list.computation.matrix$stati.timeline[[ID]]) <<- c("node","node.status","eventDateTime","deltaTimeFromBegin")  
       }
     })
@@ -482,7 +484,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       stati.da.resettare <- lista.stati.possibili[ !(lista.stati.possibili %in% stati.da.uppgradare) ]
       st.ACTIVE.time [ stati.da.resettare ] <- 0
       
-      # browser()
       # ORA scorri i giorni che passano fra l'evento precedente e quello in esame
       # Va fatto PRIMA di attivare il controllo sull'effetto dell'evento
       if( indice.di.sequenza > 1 & indice.di.sequenza < 1 ) {
@@ -573,7 +574,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
             st.ACTIVE.time [ stati.da.resettare ] <- 0
         }
       }
-      # browser()
       # Azzera il tempo di eventuali stati che sono stati resettati
       stati.da.uppgradare <- str_replace_all(st.ACTIVE [ !(st.ACTIVE %in% c("'BEGIN'","'END")) ],"'", "")
       stati.da.resettare <- lista.stati.possibili[ !(lista.stati.possibili %in% stati.da.uppgradare) ]
@@ -596,9 +596,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         note.setEvent(eventType = ev.NOW, eventDate = data.ev.NOW )
       }
       note.set.st.ACTIVE.PRE(array.st.ACTIVE.PRE = st.ACTIVE)
-      # browser()
-      
-      if( debug == TRUE) cat("\n\t: ev.NOW=",ev.NOW)
+
+      if( debug == TRUE) cat("\n\t: ev.NOW=",ev.NOW, "    IDPaz : ",IDPaz)
       # Cerca chi ha soddisfatto le precondizioni
       newHop <- attiva.trigger( st.LAST = st.LAST, ev.NOW = ev.NOW, st.DONE = st.DONE,
                                 st.ACTIVE = st.ACTIVE, st.ACTIVE.time = st.ACTIVE.time,
@@ -655,7 +654,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         st.ACTIVE.time [ stati.da.resettare ] <- 0
 
         # browser()
-        if( debug == TRUE) cat("\n\t: ev.NOW=''")        
+        if( debug == TRUE) cat("\n\t: ev.NOW=''" , "    IDPaz : ",IDPaz)       
         # Verifica se c'e' un trigger
         newHop <- attiva.trigger( st.LAST = st.LAST, ev.NOW = "", st.DONE = st.DONE,
                                   st.ACTIVE = st.ACTIVE, st.ACTIVE.time = st.ACTIVE.time,
@@ -679,7 +678,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         }
         # Se hai rilevato qualche trigger attivo
         if(length(newHop$active.trigger)!=0)  {
-          # browser()
           # verifica che la lista dei nodi attivi ed trigger non siano gia' avvenuto Se no, rischio un loop infinito
           # Se non e' null, significa che e' gia' scattato in passato
           
@@ -730,8 +728,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         break;
       }
     }
-# browser()
-    if( debug == TRUE) cat("\n\t: ev.NOW=EOF")     
+
+    if( debug == TRUE) cat("\n\t: ev.NOW=EOF"   , "    IDPaz : ",IDPaz)  
     # Se la computazione non e', per qualche motivo, interrotta
     if( stop.computation == FALSE  & sum(arr.nodi.end %in% st.ACTIVE) == 0) {
       # Now process the EOF !!
@@ -1328,7 +1326,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   #===========================================================
   plot.replay.result<-function( whatToCount='activations' ,     kindOfNumber='relative',
                                    avoidFinalStates=c(), avoidTransitionOnStates=c(), avoidToFireTrigger=c(),
-                                whichPatientID=c("*"), plot.unfired.Triggers = FALSE,
+                                whichPatientID=c("*"), plot.unfired.Triggers = TRUE,
                                 giveBack.grVizScript = FALSE
                                 ) {
 
@@ -1354,10 +1352,12 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # prendo i nodi end
     arr.nodi.end <- WF.struct[[ "info" ]][[ "arr.nodi.end" ]]
     # Frulla per ogni possibile trigger, verificando se si puo' attivare
+    # browser()
     for( trigger.name in names(WF.struct$info$trigger) ) {
       # Se il trigger e' plottabile
       if(WF.struct$info$trigger[[trigger.name]]$plotIt == TRUE) {
-
+# if( trigger.name == "T1_AD_85") browser()
+# if( trigger.name == "'T1_AD_85'") browser()        
         stringa.nodo.from<-str_c( stringa.nodo.from,"\n" )
         stringa.nodo.to<-str_c( stringa.nodo.to,"\n" )
         # Prendi i nodi 'unset' (from)
@@ -1402,7 +1402,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         }
       }
     }
-
+    # browser()
     # Distingui fra nodi end e nodi normali (questione di colore)
     arr.terminazioni.raggiungibili <- arr.nodi.end[arr.nodi.end %in% arr.stati.raggiungibili]
     arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
@@ -1439,6 +1439,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     if(debug == TRUE) bb = new.giveBackComputationCounts( whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)
     # browser()
     for(nome.stato in arr.stati.raggiungibili)  {
+      # if( nome.stato == "HP_AD_over85" | nome.stato == "'HP_AD_over85'") browser()
       nome.stato.pulito <- str_replace_all(string = nome.stato,pattern = "'",replacement = "")
       if(debug == FALSE) aa = giveBackComputationCounts(nomeElemento = nome.stato.pulito, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)
       if(debug == TRUE) { aa<-list();     aa$howMany <- bb$states.howMany[nome.stato.pulito]; aa$totalNumber <- bb$totalNumber; aa$array.patID <- bb$array.patID; }
@@ -1463,7 +1464,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # PER I TRIGGER
     lista.freq.trigger<-list()
     stringa.trigger<-"node [fillcolor = white, shape = box ]"
+    # browser()
     for(nome.trigger in arr.trigger.rappresentabili)  {
+      # if( nome.trigger == "T1_AD_85" | nome.trigger == "'T1_AD_85'") browser()
+      
       nome.trigger.pulito <- str_replace_all(string = nome.trigger,pattern = "'",replacement = "")
       if(debug == FALSE) aa = giveBackComputationCounts(nomeElemento = nome.trigger.pulito, tipo='trigger', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID )
       if(debug == TRUE) { aa<-list();     aa$howMany <- bb$trigger.howMany[nome.trigger.pulito]; aa$totalNumber <- bb$totalNumber; aa$array.patID <- bb$array.patID; }
@@ -1478,6 +1482,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         stringa.trigger <- str_c(stringa.trigger,"\n\t ",nome.trigger," [label = '",nome.trigger.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"', fontcolor='Gray",colore,"']")
       }
     }
+    # browser()
     # STRINGA NODO FROM (ARCO)
     stringa.nodo.from<-"\nedge [arrowsize = 1 ]"
     for(i in seq(1,nrow(matrice.nodi.from))) {
@@ -1751,7 +1756,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     tmpAttr$st.ACTIVE.POST <<- array.st.ACTIVE.POST
   }
   note.set.fired.trigger<-function( array.fired.trigger ){
-    if(array.fired.trigger=="''" || array.fired.trigger=="") return()
+    # sonoqui
+    if( length(array.fired.trigger) == 0 ) return()
+    # if(array.fired.trigger=="''" || array.fired.trigger=="") return()
     tmpAttr$boolean.fired.trigger <<- TRUE
     tmpAttr$fired.trigger <<- array.fired.trigger
   }
@@ -1771,13 +1778,31 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # Vedi se devi aggiornare anche la lista delle matrici
     # con i log della computazione
     if( tmpAttr$store.computation.matrix == TRUE ) {
+      # if( length(tmpAttr$st.ACTIVE.POST) > 1) browser()
       tmp.stati.post <- str_replace_all(string = tmpAttr$st.ACTIVE.POST, pattern  = "'",replacement = "")
       tmp.stati.pre <- str_replace_all(string = tmpAttr$st.ACTIVE.PRE, pattern  = "'",replacement = "")
       tmp.stati.pre.da.abbassare <- tmp.stati.pre[ which( !(tmp.stati.pre %in% tmp.stati.post))   ]
       tmp.stati.post <- tmp.stati.post[!(tmp.stati.post %in% tmp.stati.pre)]
-      list.computation.matrix$trigger[tmpAttr$idPatient, unique(tmpAttr$fired.trigger)]<<- list.computation.matrix$trigger[tmpAttr$idPatient,unique(tmpAttr$fired.trigger)] +1
-      list.computation.matrix$stati.transizione[tmpAttr$idPatient, unique(tmp.stati.post)]<<- list.computation.matrix$stati.transizione[tmpAttr$idPatient,unique(tmp.stati.post)] +1
+      # -im claudio
+      global.contatore <<- global.contatore + 1 
+      # if( global.contatore == 5 ) browser()
+      # cat("\n *** (",global.contatore,") tmpAttr$fired.trigger : ",tmpAttr$fired.trigger)
+      # cat("\n *** (",global.contatore,") tmpAttr$idPatient : ",tmpAttr$idPatient)    
 
+      # list.computation.matrix$trigger[tmpAttr$idPatient, unique(tmpAttr$fired.trigger)]<<- list.computation.matrix$trigger[tmpAttr$idPatient,unique(tmpAttr$fired.trigger)] +1
+      # list.computation.matrix$stati.transizione[tmpAttr$idPatient, unique(tmp.stati.post)]<<- list.computation.matrix$stati.transizione[tmpAttr$idPatient,unique(tmp.stati.post)] +1
+      
+      tmpAttr$fired.trigger <- tmpAttr$fired.trigger[which(!tmpAttr$fired.trigger %in% c(""))]
+      tmp.stati.post <- tmp.stati.post[which(!tmp.stati.post %in% c(""))]      
+      if( length(tmpAttr$fired.trigger) > 0 ) { 
+        list.computation.matrix$trigger[tmpAttr$idPatient, unique(tmpAttr$fired.trigger)]<<- list.computation.matrix$trigger[tmpAttr$idPatient,unique(tmpAttr$fired.trigger)] +1
+      }
+      if( length(tmp.stati.post) > 0 ) {
+        list.computation.matrix$stati.transizione[tmpAttr$idPatient, unique(tmp.stati.post)]<<- list.computation.matrix$stati.transizione[tmpAttr$idPatient,unique(tmp.stati.post)] +1        
+      } 
+      
+      # -fm claudio
+      
       if(length(list.computation.matrix$stati.timeline)==0) {
         list.computation.matrix$stati.timeline[[ tmpAttr$idPatient  ]]<<-list()
         list.computation.matrix$stati.timeline[[ tmpAttr$idPatient  ]]<<-c()
