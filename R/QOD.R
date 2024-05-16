@@ -291,9 +291,9 @@ QOD <- function( UM = "" ) {
           if( holdEvts == TRUE ) {
             quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate <= (t*convUM)   )
           } else {
-            quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate >= ((t-1)*convUM) & tmpDLS$pat.process[[IPP]]$pMineR.deltaDate <= ((t)*convUM)   )
+            quale <- which(tmpDLS$pat.process[[IPP]]$pMineR.deltaDate >= ((t-1)*convUM) & tmpDLS$pat.process[[IPP]]$pMineR.deltaDate < ((t)*convUM)   )
           }
-          quale <- quale[ length(quale) ]
+          # quale <- quale[ length(quale) ]
           tmpDLS$pat.process[[IPP]][[tmpDLS$csv.EVENTName]][quale]
           
         }  ))
