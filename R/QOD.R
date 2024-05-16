@@ -260,7 +260,7 @@ QOD <- function( UM = "" ) {
   #=================================================================================
   # plotTraceEvolution
   #=================================================================================
-  plotTraceEvolution <- function( objDL.out, holdEvts = FALSE , UM = "days" , max.t = Inf,
+  plotTraceEvolution <- function( objDL.out, holdEvts = FALSE , UM = "days" , max.t = Inf, max.y = Inf,
                                   legend.Pos = "topright", plot.legend = TRUE, legend.cex = 0.8,
                                   arr.ID = c(), cumulative = FALSE, arr.events = c()) {
     
@@ -339,6 +339,7 @@ QOD <- function( UM = "" ) {
         y.vals <- y; ylim <- c(0,y.max.val); ylab <- "abs"
       }
       if( i == 1) {
+        if( max.y != Inf ) ylim <- c(0,max.y)
         plot( as.numeric(names(lst.valori.1)) ,y.vals, type='l', lwd=2,col=arr.colore[i],
               xlab=UM, ylab=ylab, ylim=ylim, main="traces evolution")
       } else {
