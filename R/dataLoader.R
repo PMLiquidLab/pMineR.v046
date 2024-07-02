@@ -18,7 +18,7 @@
 #' @import progress
 #' @importFrom data.table data.table 
 #' @export
-dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memory = FALSE ) {
+dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memory = FALSE) {
   arrayAssociativo<-''
   footPrint<-''
   MMatrix<-''
@@ -40,6 +40,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
   param.max.char.length.label<-'';
   param.column.names<-''
   param.save.memory<-'';
+  # param.load.footPrintTable <- FALSE  
   obj.LH<-''
   global.personal.ID<-NA
   #=================================================================================
@@ -112,7 +113,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     if(toReturn=="dataLoader"){
       if(param.verbose == TRUE) obj.LH$sendLog(" 2) Create a new dataLoader object  (this splits in many steps) :\n")
       # Istanzia un oggetto dataLoader che eridita il parametro "verbose"
-      daRestituire<-dataLoader(verbose.mode = param.verbose)
+      daRestituire<-dataLoader(verbose.mode = param.verbose )
       daRestituire$load.data.frame(mydata = new.myData,
                                    IDName = param.IDName,EVENTName = param.EVENTName,
                                    dateColumnName = param.dateColumnName,format.column.date = "%d/%m/%Y %H:%M:%S")      
@@ -253,7 +254,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
       return(matriciona);  
     }    
     if( whatToReturn == "dataLoader"){
-      newObj <- dataLoader(verbose.mode = param.verbose);
+      newObj <- dataLoader(verbose.mode = param.verbose );
       newObj$load.data.frame( mydata = matriciona, IDName = IDName, EVENTName = EVENTName, 
                        dateColumnName = dateColumnName , format.column.date = "%d/%m/%Y %H:%M:%S", 
                        convertUTF = FALSE, suppress.invalid.date = FALSE)        
@@ -352,6 +353,8 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     if( length(class(mydata)) > 1) stop("Please, set the input dataset to a data.frame")
     if( class(mydata) == "matrix") mydata <- data.frame(mydata)
     
+    # browser()
+    
     # clear all the attributes
     obj.Utils <- utils()
     clearAttributes( );
@@ -447,8 +450,17 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     if(  sum( is.na(mydata[[dateColumnName]]) ) > 0  ) {  obj.LH$sendLog( c("at least one date is set to NA, please check loaded data and data format! (patients: ",paste(    mydata[which(is.na(mydata[[dateColumnName]])),IDName]  ,collapse = ','),") \n")  ,"ERR"); return()}      
 
     arrayAssociativo<<-res$arrayAssociativo
-    footPrint<<-res$footPrint
+    
     MMatrix<<-res$MMatrix
+# browser()
+#     if( param.load.footPrintTable == FALSE ) {
+    footPrint <<- res$footPrint
+    # } else {
+    #   footPrint <<- buildFootPrintTable(  MM = MMatrix )    
+    # }
+
+  
+    
     # - im 
     local.pat.process <- list()
     local.pat.process$pat.process <- list()
@@ -504,7 +516,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
 
     return(list(
       "arrayAssociativo"=arrayAssociativo,
-      # "footPrint"=footPrint,
+      "footPrint"=footPrint,
       "MMatrix"=MMatrix,
       "MMatrix.perc"=MMatrix.perc,
       "MMatrix.perc.noLoop"=MMatrix.perc.noLoop,
@@ -583,6 +595,25 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     return(DF)
   }
   
+  #=================================================================================
+  # buildFootPrintTable
+  #=================================================================================   
+  buildFootPrintTable<-function( MM ) {
+    actionList<-list();
+    FF<-array("#",dim=dim(MM));
+    colnames(FF)<-colnames(MM);  rownames(FF)<-rownames(MM)
+    elementi<-expand.grid(rownames(MM),rownames(MM))
+    for( riga in seq(1,nrow(elementi))) {
+      if(elementi[riga,1] == elementi[riga,2]) { FF[ elementi[riga,1] , elementi[riga,2]]<-"#" }
+      if(  MM[elementi[riga,1],elementi[riga,2]] == 0 & MM[elementi[riga,2],elementi[riga,1]]!=0  ) { FF[ elementi[riga,1] , elementi[riga,2]]<-"<-" }
+      if(  MM[elementi[riga,1],elementi[riga,2]] != 0 & MM[elementi[riga,2],elementi[riga,1]]==0  ) { FF[ elementi[riga,1] , elementi[riga,2]]<-"->" }
+      if(  MM[elementi[riga,1],elementi[riga,2]] != 0 & MM[elementi[riga,2],elementi[riga,1]]!=0  ) { FF[ elementi[riga,1] , elementi[riga,2]]<-"||" }
+    }
+    # CHIODO
+    for(i in seq(1,nrow(FF))) FF[i,i]<-'#'
+    return(FF);
+  }
+  
   
   #=================================================================================
   # costructor
@@ -609,12 +640,15 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     param.column.names<<-''
     param.max.char.length.label<<-max.char.length.label
     param.save.memory<<- saveMemory
+    # browser()
+    # param.load.footPrintTable <<- load.footPrintTable
     original.CSV <<- ''
     
     obj.LH<<-logHandler()
     global.personal.ID<<-paste( c(as.character(runif(1,1,100000)),as.character(runif(1,1,100000)),as.character(runif(1,1,100000))), collapse = '' )
   }
-  costructor( verboseMode = verbose.mode, max.char.length.label = max.char.length.label, saveMemory = save.memory )
+  costructor( verboseMode = verbose.mode, max.char.length.label = max.char.length.label, 
+              saveMemory = save.memory)
   #================================================================================= 
   return(list(
     "load.csv"=load.csv,

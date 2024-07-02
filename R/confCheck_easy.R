@@ -2474,6 +2474,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     return( list("survdiff"=logRank , "survfit"=fitting) )
   }
+  get.WF.struct <- function( ) {
+    return( WF.struct )
+  }
   #=================================================================================
   # costructor
   #=================================================================================
@@ -2535,6 +2538,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     "plotPatientReplayedTimeline" = plotPatientReplayedTimeline, # rimpiazza la plotPatientComputedTimeline
     "getPatientLog"=getPatientLog,
     "getPatientXML"=getPatientXML,
+    "get.WF.struct"=get.WF.struct,
     "giveBackComputationCounts"=giveBackComputationCounts,
     "new.giveBackComputationCounts"=new.giveBackComputationCounts,
     "KaplanMeier"=KaplanMeier,
