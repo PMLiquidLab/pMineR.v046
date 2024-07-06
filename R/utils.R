@@ -365,7 +365,7 @@ calcolaEnhancedFootPrintTable.pat.process <- function( dataLoaderOBJ , skip.less
 calcolaFootPrintTable.pat.process <- function( dataLoaderOBJ , skip.less.than = 0, threshold.perc = 0.00000001 ) {
   
   # rbind.data.frame <- do.call(rbind.data.frame, dataLoaderOBJ$pat.process )
-
+# browser()
   FPT<-dataLoaderOBJ$MMatrix;  FPT[,]<-"#"
   FPT.numbers.R<-dataLoaderOBJ$MMatrix;  FPT.numbers.R[,]<-0
   
