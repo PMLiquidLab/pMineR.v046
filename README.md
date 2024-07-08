@@ -52,6 +52,15 @@ Here is an R Markdown that explains how to take the first steps
 
 http://www.pminer.info/progetti/pMineRTutorialWebsite/FOMM/FOMM.html
 
+### 04 - CFM : Process Discovery via CareFlow Miner 
+
+The class *careFlowMiner()* is class for Process Discovery via this other method.
+
+Here is an R Markdown that explains how to take the first steps
+
+http://www.pminer.info/progetti/pMineRTutorialWebsite/CFM/CFM_tutorial.html
+
+
 ### 05 - PWL: Conformance Checking and Computer Interpretable Guidelines – part 1
 
 A *Hello World* with PWL, a formalism born for representing simple Clinical Guidelines and make Conformance Checking.
