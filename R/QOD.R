@@ -260,9 +260,11 @@ QOD <- function( UM = "" ) {
   #=================================================================================
   # plotTraceEvolution
   #=================================================================================
-  plotTraceEvolution <- function( objDL.out, holdEvts = FALSE , UM = "days" , max.t = Inf, max.y = Inf,
+  plotTraceEvolution <- function( objDL.out = NA, holdEvts = FALSE , UM = "days" , max.t = Inf, max.y = Inf,
                                   legend.Pos = "topright", plot.legend = TRUE, legend.cex = 0.8,
                                   arr.ID = c(), cumulative = FALSE, arr.events = c()) {
+    
+    if( is.na(objDL.out) ) objDL.out <- global.dataLoader
     
     get.during.time <- function( loadedData , max.t , UM , holdEvts , arr.events) {
       

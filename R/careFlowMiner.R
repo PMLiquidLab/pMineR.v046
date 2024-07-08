@@ -1658,6 +1658,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
     if( length(ID.possibiliFigli) == 1 ) {
       winner.pos <- 1; 
       winner.ID <- ID.possibiliFigli[ winner.pos ]
+      # if( ID=="root" & Struttura.Dati$lst.nodi[[ winner.ID ]]$evento != "Medical Visit" ) browser()
       winner.event <- Struttura.Dati$lst.nodi[[ winner.ID ]]$evento    
     }
     if( length(ID.possibiliFigli) > 1 ) {
@@ -1688,6 +1689,7 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
       } else {
         newValue <- mean(arr.secs)
       }
+      newValue <- abs(newValue)
       startingDate <- substr(as.character(as.POSIXct( offsetDate , format =  "%d/%m/%Y %H:%M:%S" ) + newValue),1,19)
       if( is.na(startingDate)) browser()
       startingDate <- str_replace_all(string = startingDate, pattern = "-",replacement = "/")

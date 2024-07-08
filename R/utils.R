@@ -12,6 +12,11 @@ expand.grid.unique <- function(x, y, include.equals=FALSE) {
   }
   do.call(rbind, lapply(seq_along(x), g))
 }
+# =============================================================================
+#' the utils class
+#' 
+#' @description  A class which provide some tools. 
+#' @export
 utils <- function() {
   dectobin <- function(y) {
     # find the binary sequence corresponding to the decimal number 'y'
@@ -87,6 +92,10 @@ utils <- function() {
     }
     return(newHI)
   }
+  get.footPrintTable <- function( dataLoaderOBJ ) {
+    ret <- calcolaFootPrintTable.pat.process(dataLoaderOBJ = objDL$getData() ) 
+    return(ret)
+  }
   return(list(
     "dectobin" = dectobin,
     "is.included" = is.included,
@@ -94,8 +103,8 @@ utils <- function() {
     "cleanUTF"=cleanUTF,
     "IsASCII"=IsASCII,
     "get.IRON.Palette"=get.IRON.Palette,
-    "get.HOT_IRON"=get.HOT_IRON
-    
+    "get.HOT_IRON"=get.HOT_IRON,
+    "get.footPrintTable" = get.footPrintTable
   ))
 }
 # =============================================================================
