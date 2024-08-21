@@ -1325,7 +1325,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   # kindOfNumber : i numeri: 'relative' o 'absolute'
   #===========================================================
   plot.replay.result<-function( whatToCount='activations' ,     kindOfNumber='relative',
-                                   avoidFinalStates=c(), avoidTransitionOnStates=c(), avoidToFireTrigger=c(),
+                                 avoidFinalStates=c(), avoidTransitionOnStates=c(), avoidToFireTrigger=c(),
                                 whichPatientID=c("*"), plot.unfired.Triggers = TRUE,
                                 giveBack.grVizScript = FALSE
                                 ) {
@@ -1419,7 +1419,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     for(i in clean.arr.terminazioni.raggiungibili) {
       colore <- str_trim(WF.struct$info$stati[[i]]$col)
       if(colore=="") colore <- "red"
-      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+      # tmp.quanti <- giveBackComputationCounts(nomeElemento = i, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)$array.patID
+      # tmp.quanti <- length(tmp.quanti)
+      tmp.quanti <- giveBackComputationCounts(nomeElemento = i, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)$howMany      
+      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n(# ",tmp.quanti,")', fillcolor = ",colore,"] '",i,"' ")
     }
     
     for(i in clean.arr.stati.raggiungibili) {
