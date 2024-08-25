@@ -1569,6 +1569,286 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     grViz(a);
   }
   #===========================================================
+  toChar<-function( objToCast ) {
+    if( class(objToCast) == "factor" ) {
+      objToCast <- levels(objToCast)[objToCast]    
+    }
+    return(objToCast)
+  }  
+  #===========================================================
+  # plot.stratified.result  ( ex plotComputationResult)
+  # plot the Graph
+  # 'clear' is the graph as passed
+  # 'computed' is the graph weighted by real computation flows
+  #===========================================================
+  plot.stratified.result<-function( stratification.variable,
+                                    arr.strat.value.A, 
+                                    arr.strat.value.B,
+                                    whatToCount='activations', 
+                                    chisq = FALSE,
+                                    fisher = TRUE,
+                                    p.value.threshold = 0.01,
+                                    debug = FALSE
+  ) {
+    avoidFinalStates <- c(); avoidTransitionOnStates <- c()
+    avoidToFireTrigger <- c();  whichPatientID <- c("*")
+    plot.unfired.Triggers <- TRUE;  arr.st.plotIt<-c("'BEGIN'");  arr.nodi.end<-c()
+    arr.stati.raggiungibili<-c();   arr.trigger.rappresentabili<-c();
+    stringa.nodo.from<-c();   stringa.nodo.to<-c()
+    stringa.nodo.from.hidden <- c();  stringa.nodo.to.hidden <- c()
+    howMany<-list()
+
+    matrice.nodi.from<-c();    matrice.nodi.to<-c()
+    # Costruisci subito la lista dei nodi plottabili (cosi' non ci penso piu')
+    # Faccio anche la lista dei nodi END
+    for(nomeStato in names(WF.struct$info$stati)) {
+      if( WF.struct$info$stati[[nomeStato]]$plotIt == TRUE) {
+        arr.st.plotIt <- c(arr.st.plotIt,str_c("'",nomeStato,"'"))
+      }
+    }
+    # prendo i nodi end
+    arr.nodi.end <- WF.struct[[ "info" ]][[ "arr.nodi.end" ]]
+
+    # Prendi quanti partono, dal primo nodo dell'anallisi (coindicono con l'intero insieme dei pazienti
+    # che corrono nella GL
+    matrice <- get.list.replay.result()
+    pre.ID.passing <- rownames(matrice$list.computation.matrix$stati.transizione)
+    BEG.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+      tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
+      if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
+      return(FALSE)
+    }))) ]
+    BEG.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+      tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
+      if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
+      return(FALSE)
+    }))) ]  
+    
+    # Frulla per ogni possibile trigger, verificando se si puo' attivare
+    for( trigger.name in names(WF.struct$info$trigger) ) {
+      # Se il trigger e' plottabile
+      if(WF.struct$info$trigger[[trigger.name]]$plotIt == TRUE) {
+        stringa.nodo.from<-str_c( stringa.nodo.from,"\n" )
+        stringa.nodo.to<-str_c( stringa.nodo.to,"\n" )
+        # Prendi i nodi 'unset' (from)
+        arr.nodi.from<-unlist(WF.struct$info$trigger[[trigger.name]]$unset)
+        # Prendi i nodi 'set' (to)
+        arr.nodi.to<-unlist(WF.struct$info$trigger[[trigger.name]]$set)
+        # Considera solo i nodi plottabili (from e to)
+        arr.nodi.from <- arr.nodi.from [arr.nodi.from %in% arr.st.plotIt]
+        arr.nodi.to <- arr.nodi.to [arr.nodi.to %in% arr.st.plotIt]
+        arr.nodi.from.hidden <- unlist(WF.struct$info$trigger[[trigger.name]]$hunset)
+        arr.nodi.to.hidden<-unlist(WF.struct$info$trigger[[trigger.name]]$hset)        
+        
+        if(length(arr.nodi.to)>0 | length(arr.nodi.to.hidden)>0 | length(arr.nodi.from.hidden)>0   ) {
+          # Aggiorna l'array degli stati raggiungibili (in generale)
+          # e l'array con i nomi dei trigger rappresentabili
+          arr.stati.raggiungibili <- unique(c( arr.stati.raggiungibili, arr.nodi.to, arr.nodi.from ))
+          arr.trigger.rappresentabili <- c( arr.trigger.rappresentabili, str_c("'",trigger.name,"'") )
+          
+          # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+          if(length(arr.nodi.to)>0) {
+            for( st.nome in arr.nodi.from ) {
+              stringa.nodo.from<-str_c( stringa.nodo.from," ",st.nome,"->'",trigger.name,"'" )
+              matrice.nodi.from <- rbind(matrice.nodi.from,c(st.nome,trigger.name))
+            }
+            for( st.nome in arr.nodi.to ) {
+              stringa.nodo.to<-str_c( stringa.nodo.to," ","'",trigger.name,"'->",st.nome )
+              matrice.nodi.to <- rbind(matrice.nodi.to,c(trigger.name,st.nome))
+            }
+          }
+          if(length(arr.nodi.to.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.to.hidden ) {
+              stringa.nodo.to.hidden<-str_c( stringa.nodo.to.hidden," ","'",trigger.name,"'->",st.nome )
+            }
+          }
+          if(length(arr.nodi.from.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.from.hidden ) {
+              stringa.nodo.from.hidden<-str_c( stringa.nodo.from.hidden," ",st.nome,"->'",trigger.name,"'" )
+            }
+          }          
+        }
+      }
+    }
+
+    # Distingui fra nodi end e nodi normali (questione di colore)
+    arr.terminazioni.raggiungibili <- arr.nodi.end[arr.nodi.end %in% arr.stati.raggiungibili]
+    arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
+    # arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
+    
+    
+    # -im 
+    # Cambia i colori, se necessario
+    
+    clean.arr.terminazioni.raggiungibili <- str_replace_all(string = arr.terminazioni.raggiungibili,pattern = "'","")
+    clean.arr.stati.raggiungibili <- str_replace_all(string = arr.stati.raggiungibili,pattern = "'","")
+    
+    nuova.stringa.nodi<-""
+    for(i in clean.arr.terminazioni.raggiungibili) {
+      colore <- str_trim(WF.struct$info$stati[[i]]$col)
+      if(colore=="") colore <- "red"
+      # tmp.quanti <- giveBackComputationCounts(nomeElemento = i, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)$howMany      
+
+      # prendi tutti gli ID che son passati di li'
+      pre.ID.passing <- names(which( !(matrice$list.computation.matrix$stati.transizione[,i] == 0)))
+      pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+        tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
+        if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
+        return(FALSE)
+      }))) ]
+      pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+        tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
+        if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
+        return(FALSE)
+      }))) ]      
+      matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+      
+      if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
+      if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
+      if( p.value <= p.value.threshold ) colore <- "Yellow";
+      
+      # nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n(# ",tmp.quanti,")', fillcolor = ",colore,"] '",i,"' ")
+      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n#: ",length(pre.ID.passing.A)," / ",length(pre.ID.passing.B),"\np = ",round(p.value,digits = 5),"', fillcolor = ",colore,"] '",i,"' ")      
+    }
+    
+    for(i in clean.arr.stati.raggiungibili) {
+      if(i!="BEGIN"){ 
+        colore <- str_trim(WF.struct$info$stati[[i]]$col)
+        if(colore=="") colore <- "orange"
+        if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
+        nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+      }
+    } 
+    # -fm
+    
+    # Ora sistema le froceries grafiche
+    # PER I NODI
+    stringa.stati<-"node [fillcolor = Orange]"
+    stringa.stati.finali <- "node [fillcolor = Red]";
+    # if( debug == TRUE ) browser()
+
+    for(nome.stato in arr.stati.raggiungibili)  {
+      nome.stato.pulito <- str_replace_all(string = nome.stato,pattern = "'",replacement = "")
+      aa <- giveBackComputationCounts(nomeElemento = nome.stato.pulito, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)
+      howMany <- as.character((aa$howMany * 100 / aa$totalNumber))
+      penwidth<- 1 + 5 * (aa$howMany  / aa$totalNumber)
+      penwidth<- 1
+      colore <- as.integer(100-(30+(aa$howMany  / aa$totalNumber)*70))
+      # numberToPrint<-str_c("# ",aa$howMany)
+      # Se non e' uno stato finale
+      # -im
+      if( debug == TRUE ) browser()
+      pre.ID.passing <- 0; pre.ID.passing.A <- 0; pre.ID.passing.B <- 0; p.value <- 1
+      if( nome.stato.pulito == "BEGIN") {
+        pre.ID.passing <- unique(c(BEG.ID.passing.A,BEG.ID.passing.B))
+      }
+      else {
+        pre.ID.passing <- names(which( !(matrice$list.computation.matrix$stati.transizione[,nome.stato.pulito] == 0)))        
+      }
+      if( length(pre.ID.passing) > 0 ) {
+        pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+          tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
+          if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
+          return(FALSE)
+        }))) ]
+        pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+          tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
+          if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
+          return(FALSE)
+        }))) ]      
+        matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+        
+        if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
+        if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
+        if( p.value <= p.value.threshold ) colore <- "Yellow";   
+      }
+      numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",round(p.value,digits = 5) ),collapse = '')      
+      # -fm
+      
+      if(!(nome.stato %in% arr.nodi.end)) {
+        stringa.stati <- str_c(stringa.stati,"\n\t ",nome.stato," [label = '",nome.stato.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"',  pencolor='Gray",colore,"']")
+      }
+      else {
+        stringa.stati.finali <- str_c(stringa.stati.finali,"\n\t ",nome.stato," [label = '",nome.stato.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"',  pencolor='Gray",colore,"']")
+      }
+    }
+    # PER I TRIGGER
+    lista.freq.trigger<-list()
+    stringa.trigger<-"node [fillcolor = white, shape = box ]"
+    for(nome.trigger in arr.trigger.rappresentabili)  {
+
+      nome.trigger.pulito <- str_replace_all(string = nome.trigger,pattern = "'",replacement = "")
+      aa <- giveBackComputationCounts(nomeElemento = nome.trigger.pulito, tipo='trigger', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID )
+
+      howMany <- as.character((aa$howMany * 100 / aa$totalNumber))
+      if( plot.unfired.Triggers == TRUE | (plot.unfired.Triggers==FALSE & howMany>0)) {
+        lista.freq.trigger[[nome.trigger]]<-(aa$howMany  / aa$totalNumber)
+        penwidth<- 1 + 5 * (aa$howMany  / aa$totalNumber)
+        penwidth<- 1
+        colore <- as.integer(100-(30+(aa$howMany  / aa$totalNumber)*70))
+        numberToPrint<-str_c("# ",aa$howMany)
+        stringa.trigger <- str_c(stringa.trigger,"\n\t ",nome.trigger," [label = '",nome.trigger.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"', fontcolor='Gray",colore,"']")
+      }
+    }
+    # STRINGA NODO FROM (ARCO)
+    stringa.nodo.from<-"\nedge [arrowsize = 1 ]"
+    for(i in seq(1,nrow(matrice.nodi.from))) {
+      val.perc<-lista.freq.trigger[[ str_c("'",matrice.nodi.from[i,2],"'") ]]
+      arrowsize<- .5 + 7 * val.perc
+      colore <- as.integer(100-(30+val.perc*70))
+      labelArco <- str_c(round(val.perc*100,2),"%")
+      labelArco<-''
+      nuovaRiga<-str_c("\n\t",matrice.nodi.from[i,1],"->'",matrice.nodi.from[i,2],"' [label = '",labelArco,"', penwidth='",arrowsize,"', fontcolor='Gray",colore,"', pencolor='Gray",colore,"'  ]")
+      stringa.nodo.from<-c(stringa.nodo.from,nuovaRiga)
+    }
+    
+    # STRINGA NODO TO (ARCO)
+    stringa.nodo.to<-"\nedge [arrowsize = 1 ]"
+    for(i in seq(1,nrow(matrice.nodi.to))) {
+      val.perc<-lista.freq.trigger[[ str_c("'",matrice.nodi.to[i,1],"'") ]]
+      arrowsize<- .5 + 7 * val.perc
+      colore <- as.integer(100-(30+val.perc*70))
+      labelArco <- str_c(round(val.perc*100,2),"%")
+      labelArco<-''
+      nuovaRiga<-str_c("\n\t'",matrice.nodi.to[i,1],"'->",matrice.nodi.to[i,2]," [label = '",labelArco,"', penwidth='",arrowsize,"', fontcolor='Gray",colore,"', pencolor='Gray",colore,"' ]")
+      stringa.nodo.to<-c(stringa.nodo.to,nuovaRiga)
+    }
+    
+    # nuova.stringa.nodi
+    a<-paste(c("digraph boxes_and_circles {
+
+               # a 'graph' statement
+               graph [overlap = true, fontsize = 10]
+
+               # several 'node' statements
+               node [shape = oval,
+               fontname = Helvetica,
+               style = filled]
+               node [fillcolor = green]
+               'BEGIN';
+               ",nuova.stringa.nodi,"
+
+               ",stringa.stati,"
+               ",stringa.trigger,"
+
+               edge [arrowsize = 1 ]
+               # several edge
+               ",stringa.nodo.from,"
+               ",stringa.nodo.to,"
+
+               edge [arrowsize = 1, style=dashed ]
+               # several edge
+               ",stringa.nodo.from.hidden,"
+               ",stringa.nodo.to.hidden,"
+
+  }"), collapse='')
+ 
+    return (a)
+    
+  }  
+  #===========================================================
   # giveBackComputationCounts
   # fa la conta di quanto quello 'stato' o 'trigger' e' stato
   # toccato nella computazione.
@@ -2535,6 +2815,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     "replay"=replay, # rimpiazza la playLoadedData
     "plot"=plot, # rimpiazza la plotGraph
     "plot.replay.result"=plot.replay.result, # rimpiazza la plotComputationResult
+    "plot.stratified.result"=plot.stratified.result,
     # "query.Patient"=query.Patient,
     "get.list.replay.result"=get.list.replay.result, # rimpiazza la getPlayedSequencesStat.00
     "get.XML.replay.result"=get.XML.replay.result, # rimpiazza la getXML
