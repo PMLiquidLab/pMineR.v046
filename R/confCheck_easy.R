@@ -1597,6 +1597,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     stringa.nodo.from<-c();   stringa.nodo.to<-c()
     stringa.nodo.from.hidden <- c();  stringa.nodo.to.hidden <- c()
     howMany<-list()
+    arr.stati.yellow <- c()
 
     matrice.nodi.from<-c();    matrice.nodi.to<-c()
     # Costruisci subito la lista dei nodi plottabili (cosi' non ci penso piu')
@@ -1679,7 +1680,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
     
     
-    # -im 
+    
     # Cambia i colori, se necessario
     
     clean.arr.terminazioni.raggiungibili <- str_replace_all(string = arr.terminazioni.raggiungibili,pattern = "'","")
@@ -1707,22 +1708,24 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       
       if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
       if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
-      if( p.value <= p.value.threshold ) colore <- "Yellow";
-      
+      if( p.value <= p.value.threshold ) {
+        colore <- "Yellow";
+        arr.stati.yellow <- c(arr.stati.yellow , nome.stato.pulito)
+      }
+
       # nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n(# ",tmp.quanti,")', fillcolor = ",colore,"] '",i,"' ")
       nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n#: ",length(pre.ID.passing.A)," / ",length(pre.ID.passing.B),"\np = ",round(p.value,digits = 5),"', fillcolor = ",colore,"] '",i,"' ")      
     }
     
-    for(i in clean.arr.stati.raggiungibili) {
-      if(i!="BEGIN"){ 
-        colore <- str_trim(WF.struct$info$stati[[i]]$col)
-        if(colore=="") colore <- "orange"
-        if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
-        nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
-      }
-    } 
-    # -fm
-    
+    # for(i in clean.arr.stati.raggiungibili) {
+    #   if(i!="BEGIN"){ 
+    #     colore <- str_trim(WF.struct$info$stati[[i]]$col)
+    #     if(colore=="") colore <- "orange"
+    #     if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
+    #     nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+    #   }
+    # } 
+
     # Ora sistema le froceries grafiche
     # PER I NODI
     stringa.stati<-"node [fillcolor = Orange]"
@@ -1738,7 +1741,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       colore <- as.integer(100-(30+(aa$howMany  / aa$totalNumber)*70))
       # numberToPrint<-str_c("# ",aa$howMany)
       # Se non e' uno stato finale
-      # -im
+
       if( debug == TRUE ) browser()
       pre.ID.passing <- 0; pre.ID.passing.A <- 0; pre.ID.passing.B <- 0; p.value <- 1
       if( nome.stato.pulito == "BEGIN") {
@@ -1762,10 +1765,13 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         
         if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
         if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
-        if( p.value <= p.value.threshold ) colore <- "Yellow";   
+        if( p.value <= p.value.threshold ) {
+          # colore <- "Yellow";
+          arr.stati.yellow <- c(arr.stati.yellow , nome.stato.pulito)
+        }
       }
       numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",round(p.value,digits = 5) ),collapse = '')      
-      # -fm
+
       
       if(!(nome.stato %in% arr.nodi.end)) {
         stringa.stati <- str_c(stringa.stati,"\n\t ",nome.stato," [label = '",nome.stato.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"',  pencolor='Gray",colore,"']")
@@ -1774,6 +1780,18 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         stringa.stati.finali <- str_c(stringa.stati.finali,"\n\t ",nome.stato," [label = '",nome.stato.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"',  pencolor='Gray",colore,"']")
       }
     }
+    
+    for(i in clean.arr.stati.raggiungibili) {
+      if(i!="BEGIN"){ 
+        if( debug == TRUE ) browser()
+        colore <- str_trim(WF.struct$info$stati[[i]]$col)
+        if(colore=="") colore <- "orange"
+        if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
+        if( i %in% arr.stati.yellow) colore <- "yellow"
+        nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+      }
+    } 
+    
     # PER I TRIGGER
     lista.freq.trigger<-list()
     stringa.trigger<-"node [fillcolor = white, shape = box ]"
@@ -1788,8 +1806,33 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         penwidth<- 1 + 5 * (aa$howMany  / aa$totalNumber)
         penwidth<- 1
         colore <- as.integer(100-(30+(aa$howMany  / aa$totalNumber)*70))
-        numberToPrint<-str_c("# ",aa$howMany)
-        stringa.trigger <- str_c(stringa.trigger,"\n\t ",nome.trigger," [label = '",nome.trigger.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"', fontcolor='Gray",colore,"']")
+        
+        # prendi tutti gli ID che son passati di li'
+        tr.fillcolor <- "white"
+        pre.ID.passing <- names(which( !(matrice$list.computation.matrix$trigger[,nome.trigger.pulito] == 0)))
+        if( length(pre.ID.passing) > 0 ) {
+          pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+            tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
+            if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
+            return(FALSE)
+          }))) ]
+          pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+            tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
+            if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
+            return(FALSE)
+          }))) ]      
+          matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+          
+          if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
+          if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
+          if( p.value <= p.value.threshold ) tr.fillcolor <- "Yellow";   
+        } else {
+          pre.ID.passing.A <- c(); pre.ID.passing.B<-c(); p.value <- 1
+        }
+
+        numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",round(p.value,digits = 5) ),collapse = '')      
+        # numberToPrint<-str_c("# ",aa$howMany)
+        stringa.trigger <- str_c(stringa.trigger,"\n\t ",nome.trigger," [label = '",nome.trigger.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"', fontcolor='Gray",colore,"', fillcolor = '",tr.fillcolor,"' ]")
       }
     }
     # STRINGA NODO FROM (ARCO)
