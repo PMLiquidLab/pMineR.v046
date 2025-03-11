@@ -1610,20 +1610,34 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # prendo i nodi end
     arr.nodi.end <- WF.struct[[ "info" ]][[ "arr.nodi.end" ]]
 
+    # if( debug == TRUE ) browser()
+    
     # Prendi quanti partono, dal primo nodo dell'anallisi (coindicono con l'intero insieme dei pazienti
     # che corrono nella GL
     matrice <- get.list.replay.result()
     pre.ID.passing <- rownames(matrice$list.computation.matrix$stati.transizione)
-    BEG.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+    quali.A <- which(unlist(lapply( pre.ID.passing, function(ID) {
       tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
       if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
       return(FALSE)
-    }))) ]
-    BEG.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+    }))) 
+    if( length(quali.A) > 0 ) {
+      BEG.ID.passing.A <- pre.ID.passing[ quali.A ]  
+    } else {
+      BEG.ID.passing.A <- c()  
+    }
+    
+    quali.B <-  which(unlist(lapply( pre.ID.passing, function(ID) {
       tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
       if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
       return(FALSE)
-    }))) ]  
+    }))) 
+    if( length(quali.B) >0 ) {
+      BEG.ID.passing.B <- pre.ID.passing[ quali.B ]    
+    } else {
+      BEG.ID.passing.B <- c()
+    }
+    
     
     # Frulla per ogni possibile trigger, verificando se si puo' attivare
     for( trigger.name in names(WF.struct$info$trigger) ) {
@@ -1688,33 +1702,60 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     nuova.stringa.nodi<-""
     for(i in clean.arr.terminazioni.raggiungibili) {
+      
+      if( debug == TRUE ) {cat("\n i = ",i)}
+      # if( i == "T1 Deviations - Out" ) browser()
+      
       colore <- str_trim(WF.struct$info$stati[[i]]$col)
       if(colore=="") colore <- "red"
       # tmp.quanti <- giveBackComputationCounts(nomeElemento = i, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)$howMany      
 
       # prendi tutti gli ID che son passati di li'
       pre.ID.passing <- names(which( !(matrice$list.computation.matrix$stati.transizione[,i] == 0)))
-      pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+      
+      if( length(pre.ID.passing) == 0 ){
+        nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n#: 0 / 0 \np = NA ', fillcolor = white ] '",i,"' ")        
+        next;
+      }
+      
+      quali.A <- which(unlist(lapply( pre.ID.passing, function(ID) {
         tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
         if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
         return(FALSE)
-      }))) ]
-      pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+      })))
+      if( length(quali.A) > 0 ) {
+        pre.ID.passing.A <- pre.ID.passing[ quali.A ]  
+      } else{
+        pre.ID.passing.A <- c()
+      }
+      
+      quali.B <- which(unlist(lapply( pre.ID.passing, function(ID) {
         tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
         if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
         return(FALSE)
-      }))) ]      
+      })))
+      if( length(quali.B) > 0 ) {
+        pre.ID.passing.B <- pre.ID.passing[ quali.B ]     
+      } else {
+        pre.ID.passing.B <- c()
+      }
+      
+      
       matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
       
       if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
       if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
       if( p.value <= p.value.threshold ) {
+        # browser()
         colore <- "Yellow";
-        arr.stati.yellow <- c(arr.stati.yellow , nome.stato.pulito)
+        # arr.stati.yellow <- c(arr.stati.yellow , nome.stato.pulito)
+        arr.stati.yellow <- c(arr.stati.yellow , i )
       }
 
       # nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n(# ",tmp.quanti,")', fillcolor = ",colore,"] '",i,"' ")
-      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n#: ",length(pre.ID.passing.A)," / ",length(pre.ID.passing.B),"\np = ",round(p.value,digits = 5),"', fillcolor = ",colore,"] '",i,"' ")      
+      str.p.value <- round(p.value,digits = 5)
+      if( str.p.value == "0")  str.p.value <- "< 1E-05"
+      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [label='",i,"\n#: ",length(pre.ID.passing.A)," / ",length(pre.ID.passing.B),"\np = ",str.p.value,"', fillcolor = ",colore,"] '",i,"' ")      
     }
     
     # for(i in clean.arr.stati.raggiungibili) {
@@ -1733,6 +1774,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # if( debug == TRUE ) browser()
 
     for(nome.stato in arr.stati.raggiungibili)  {
+      if( debug == TRUE ) {cat("\n nome.stato = ",nome.stato)}
       nome.stato.pulito <- str_replace_all(string = nome.stato,pattern = "'",replacement = "")
       aa <- giveBackComputationCounts(nomeElemento = nome.stato.pulito, tipo='stato', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID)
       howMany <- as.character((aa$howMany * 100 / aa$totalNumber))
@@ -1742,7 +1784,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       # numberToPrint<-str_c("# ",aa$howMany)
       # Se non e' uno stato finale
 
-      if( debug == TRUE ) browser()
+      # if( debug == TRUE ) browser()
       pre.ID.passing <- 0; pre.ID.passing.A <- 0; pre.ID.passing.B <- 0; p.value <- 1
       if( nome.stato.pulito == "BEGIN") {
         pre.ID.passing <- unique(c(BEG.ID.passing.A,BEG.ID.passing.B))
@@ -1751,26 +1793,41 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         pre.ID.passing <- names(which( !(matrice$list.computation.matrix$stati.transizione[,nome.stato.pulito] == 0)))        
       }
       if( length(pre.ID.passing) > 0 ) {
-        pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+        quali.A <- which(unlist(lapply( pre.ID.passing, function(ID) {
           tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
           if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
           return(FALSE)
-        }))) ]
-        pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+        })))
+        if( length(quali.A)  > 0 ) {
+          pre.ID.passing.A <- pre.ID.passing[ quali.A ]  
+        } else {
+          pre.ID.passing.A <- c()
+        }
+        
+        quali.B <- which(unlist(lapply( pre.ID.passing, function(ID) {
           tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
           if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
           return(FALSE)
-        }))) ]      
+        })))
+        if( length(quali.B) > 0 ) {
+          pre.ID.passing.B <- pre.ID.passing[ quali.B ]        
+        } else {
+          pre.ID.passing.B <- c()
+        }
+        
         matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
         
         if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
         if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
         if( p.value <= p.value.threshold ) {
           # colore <- "Yellow";
+          # browser()
           arr.stati.yellow <- c(arr.stati.yellow , nome.stato.pulito)
         }
       }
-      numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",round(p.value,digits = 5) ),collapse = '')      
+      str.p.value <- round(p.value,digits = 5)
+      if( str.p.value == "0")  str.p.value <- "< 1E-05"
+      numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",str.p.value ),collapse = '')      
 
       
       if(!(nome.stato %in% arr.nodi.end)) {
@@ -1782,8 +1839,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
     
     for(i in clean.arr.stati.raggiungibili) {
+      if( debug == TRUE ) {cat("\n i = ",i)}
       if(i!="BEGIN"){ 
-        if( debug == TRUE ) browser()
+        # if( debug == TRUE ) browser()
         colore <- str_trim(WF.struct$info$stati[[i]]$col)
         if(colore=="") colore <- "orange"
         if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
@@ -1796,7 +1854,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     lista.freq.trigger<-list()
     stringa.trigger<-"node [fillcolor = white, shape = box ]"
     for(nome.trigger in arr.trigger.rappresentabili)  {
-
+      if( debug == TRUE ) {cat("\n nome.trigger = ",nome.trigger)}
       nome.trigger.pulito <- str_replace_all(string = nome.trigger,pattern = "'",replacement = "")
       aa <- giveBackComputationCounts(nomeElemento = nome.trigger.pulito, tipo='trigger', whatToCount = whatToCount, avoidFinalStates = avoidFinalStates, avoidTransitionOnStates = avoidTransitionOnStates, avoidToFireTrigger = avoidToFireTrigger, whichPatientID = whichPatientID )
 
@@ -1811,16 +1869,27 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         tr.fillcolor <- "white"
         pre.ID.passing <- names(which( !(matrice$list.computation.matrix$trigger[,nome.trigger.pulito] == 0)))
         if( length(pre.ID.passing) > 0 ) {
-          pre.ID.passing.A <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+          quali.A <- which(unlist(lapply( pre.ID.passing, function(ID) {
             tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])        
             if(tmp.arr.vals[1] %in% arr.strat.value.A) return(TRUE)
             return(FALSE)
-          }))) ]
-          pre.ID.passing.B <- pre.ID.passing[ which(unlist(lapply( pre.ID.passing, function(ID) {
+          })))
+          if( length(quali.A) > 0) {
+            pre.ID.passing.A <- pre.ID.passing[ quali.A ]
+          } else {
+            pre.ID.passing.A <- c()  
+          }
+          quali.B <- which(unlist(lapply( pre.ID.passing, function(ID) {
             tmp.arr.vals <- toChar(dataLog$pat.process[[ ID ]][[ stratification.variable ]])                
             if(tmp.arr.vals[1] %in% arr.strat.value.B) return(TRUE)
             return(FALSE)
-          }))) ]      
+          })))
+          if( length(quali.B) > 0 ) {
+            pre.ID.passing.B <- pre.ID.passing[ quali.B  ]        
+          } else {
+            pre.ID.passing.B <- c()
+          }
+          
           matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
           
           if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
@@ -1829,8 +1898,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         } else {
           pre.ID.passing.A <- c(); pre.ID.passing.B<-c(); p.value <- 1
         }
-
-        numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",round(p.value,digits = 5) ),collapse = '')      
+        
+        str.p.value <- round(p.value,digits = 5)
+        if( str.p.value == "0")  str.p.value <- "< 1E-05"
+        numberToPrint <- paste(c( length(pre.ID.passing.A),"/",length(pre.ID.passing.B),"\n p=",str.p.value ),collapse = '')      
         # numberToPrint<-str_c("# ",aa$howMany)
         stringa.trigger <- str_c(stringa.trigger,"\n\t ",nome.trigger," [label = '",nome.trigger.pulito,"\n",numberToPrint,"', penwidth='",penwidth,"', fontcolor='Gray",colore,"', fillcolor = '",tr.fillcolor,"' ]")
       }
