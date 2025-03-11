@@ -444,8 +444,8 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
                                      checkDurationFromRoot = FALSE, 
                                      hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
                                      arr.States.color=c("Deces"="Red","intensive care"="Orange","Recovered"="YellowGreen"), 
-                                     debug.it = F, show.far.leaf = FALSE , abs.threshold = NA , kindOfGraph = "neato",
-                                     nodeShape = "oval" , UM = "days") {
+                                     debug.it = F, show.far.leaf = FALSE , abs.threshold = NA , kindOfGraph = "dot",
+                                     nodeShape = "box" , UM = "days") {
     
     # stratificationValues <- c(1,2)
     b <- plot.comparison( stratifyFor = stratifyFor, stratificationValues = stratificationValues, 
