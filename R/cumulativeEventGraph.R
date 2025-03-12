@@ -1,0 +1,214 @@
+#' A class for a revisited Careflow Mining
+#'
+#' @description  This is an implementation of the Care Flow Mining algorithm, a bit revisited
+#' @import progress 
+#' @export
+
+
+cumulativeEvent <- function( verbose.mode = FALSE ) {
+  loadedDataset <- list()
+  objDL.v3.out <- list()
+  param.verbose <- FALSE
+  
+
+  loadDataset<-function( dataList ) {
+    param.verbose <<- verbose.mode
+    loadedDataset <<- dataList  
+    objDL.v3.out <<- list()
+    # train( objDL.v2.out = dataList)
+  }
+  
+  train <- function(  
+                    arr.time.points = c(5,10,15), 
+                    UM = "years", 
+                    abs.min.threshold.4.edges = 10) {
+    
+    objDL.v2.out <- loadedDataset
+    arr.atm.evt <- objDL.v2.out$arrayAssociativo
+    
+    # Comincio
+    charToPaste <- "|"
+    arr.time.points <- arr.time.points[which(arr.time.points > 0)]
+    arr.time.points <- c(0,arr.time.points,Inf)
+    if(UM=="years") arr.time.points <- arr.time.points * 365 * 24 * 60
+    if(UM=="months") arr.time.points <- arr.time.points * 30 * 24 * 60
+    if(UM=="weeks") arr.time.points <- arr.time.points * 7 * 24 * 60
+    if(UM=="days") arr.time.points <- arr.time.points * 7 * 24 * 60
+    
+    csv.EVENTName <- objDL.v2.out$csv.EVENTName
+    csv.dateColumnName <- objDL.v2.out$csv.dateColumnName
+    newMM <- c()
+    tmp <- lapply( names(objDL.v2.out$pat.process), function(ID){
+      cumulativo.eventi <- c()
+      MM <- objDL.v2.out$pat.process[[ID]]
+      for( ct in 1:(length(arr.time.points)-1) ) {
+        lower <- arr.time.points[ct]
+        higher <- arr.time.points[ct+1]
+        quali <- which( MM$pMineR.deltaDate >= lower & MM$pMineR.deltaDate <= higher   ) 
+        if( length(quali) > 0) {
+          cumulativo.eventi <- unique(c( cumulativo.eventi  , MM[quali,csv.EVENTName] ))
+          cumulativo.eventi <- cumulativo.eventi[order(cumulativo.eventi)]
+          nuovo.evento <- paste(cumulativo.eventi,collapse = charToPaste)      
+          # if( nuovo.evento == "0|1|1") browser()
+          nuova.riga <- MM[quali[1],]
+          # set the cluster in the date colums
+          nuova.riga[,csv.dateColumnName] <- ct
+          nuova.riga[,csv.EVENTName] <- nuovo.evento      
+          newMM <<- rbind( newMM , nuova.riga)
+        } else { 
+          nuova.riga <- newMM[ nrow(newMM),  ]
+          nuova.riga["data"] <- ct
+          newMM <<- rbind( newMM , nuova.riga)
+        }
+      }
+    } )
+    
+    aaa <- newMM
+    tmp <- unlist(lapply(1:nrow(aaa),function(riga){ 
+      paste(c(aaa[riga,"evento"]," (lev.",aaa[riga,"data"],")"),collapse = '')
+    }))
+    aaa <- cbind( aaa , "newEvent"=tmp)
+    startingDate <- "2000-01-01 00:00:00"
+    arr.Date.Cluster <- unique(newMM[,"data"])
+    arr.Date <- unique(arr.Date.Cluster) + as.Date(startingDate)
+    names(arr.Date) <- arr.Date.Cluster
+    for( i in arr.Date.Cluster ){
+      aaa[which( aaa[,"data"]== i ), "data"] <- as.character(arr.Date[i])
+    }
+    newMM <- aaa
+    
+    objDL.v3 <- dataLoader(verbose.mode = FALSE)
+    objDL.v3$load.data.frame( mydata =  newMM,IDName = "ID",EVENTName = "newEvent",dateColumnName = "data",
+                              format.column.date = "%Y-%m-%d")
+    objDL.v3.out <<- objDL.v3$getData()
+
+  }
+  
+  
+  plotCumulativeEvent <- function( 
+                          arr.time.points = c(5,10,15), 
+                          UM = "years", 
+                          threshold = 0, 
+                          defaultNodeColor = "Gold", 
+                          arr.node.col.threshold=c(0.25,0.5,0.75),
+                          abs.min.threshold.4.edges = 0) {
+    
+    train(arr.time.points = arr.time.points, UM = UM)
+    MM <- objDL.v3.out$MMatrix 
+    # prendi la lista dei nomi
+    listaNodi<-colnames(MM)
+    # la lista dei nodi raggiungibili da BEGIN
+    listaNodiFromBegin<-listaNodi[which(MM["BEGIN",]>threshold)]
+    # la lista dei nodi che vanno a END
+    listaNodiToEnd<-listaNodi[which(MM[,"END"]>threshold)]
+    
+    rigaBEGIN<-''; rigaEND<-''
+    for( i in listaNodiFromBegin) { rigaBEGIN<-paste(   c(rigaBEGIN, "'BEGIN'->'",i,"' "), collapse = '') }
+    for( i in listaNodiToEnd) { rigaEND<-paste(   c(rigaEND, "'",i,"'->'END' "), collapse = '') }  
+    
+    arr.nodi.con.archi <- c();  stringaNodiComplessi<-''
+    maxEdgeWeight = max(MM)
+    min.penwidth <- 0.8; max.penwidth <- 10
+    min.color <- 20; max.color <- 99
+    # penwidth <- 1
+    fontSize <- 12
+    colore <- 50
+    for(i in seq(1,nrow(MM))) {
+      listaNodiRiga<-listaNodi[which(MM[i,]>threshold)]
+      if(length(listaNodiRiga)>0) {
+        for( ct in seq(1,length(listaNodiRiga))) {
+          penwidth <- min.penwidth
+          color <- min.color
+          
+          denominatore.abs <- sum(MM[i,])
+          numeratore.abs <- MM[i,listaNodiRiga[ct]]
+          
+          proporzione <- numeratore.abs / maxEdgeWeight
+          penwidth <- penwidth + (max.penwidth-min.penwidth)*proporzione
+          colore <- as.integer((100-max.color) + (max.color-min.color)*(1-proporzione))
+          colore <- paste(c("Gray",colore),collapse = '')
+          
+          stringa.arco <- paste(c( "(",numeratore.abs,"/",denominatore.abs,")"),collapse = '')
+          
+          if( numeratore.abs < abs.min.threshold.4.edges ) { 
+            colore <- "White"
+          }
+          
+          stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",stringa.arco,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"',  fontcolor=",colore,", color = ",colore," ]\n"), collapse = '')  
+          arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
+        }
+      }
+    }
+    
+    listaNodiToPrint<-''
+    arr.nodi.con.archi <- unique(arr.nodi.con.archi)
+    
+    listaNodi <- listaNodi[ listaNodi %in% arr.nodi.con.archi ]  
+    # browser()
+    quanti.pazienti <- sum(MM["BEGIN",])
+    for(i in seq(1,length(listaNodi))) {
+      
+      
+      quanti.passano.per.il.nodo <- sum(MM[,listaNodi[i]])
+      totalePerNodo <- sum(MM[,listaNodi[i]])
+      if( listaNodi[i] == "BEGIN") quanti.passano.per.il.nodo <- quanti.pazienti
+      # browser()
+      ratio <- totalePerNodo / quanti.pazienti
+      fillColor <- defaultNodeColor
+      if(ratio < arr.node.col.threshold[1]) { fillColor <- paste(c(defaultNodeColor,"1"),collapse = ''); fontColor <- "Gray1" }
+      if(ratio >= arr.node.col.threshold[1] & ratio <arr.node.col.threshold[2]) { fillColor <- paste(c(defaultNodeColor,"2"),collapse = ''); fontColor <- "Gray1"  }
+      if(ratio >= arr.node.col.threshold[2] & ratio <arr.node.col.threshold[3]) { fillColor <- paste(c(defaultNodeColor,"3"),collapse = ''); fontColor <- "Gray1"  }
+      if(ratio >= arr.node.col.threshold[3]) { fillColor <- paste(c(defaultNodeColor,"4"),collapse = ''); fontColor <- "Gray99"  }
+      
+      
+      if(i<length(listaNodi)) {
+        listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ label='",listaNodi[i],"\n n=",quanti.passano.per.il.nodo,"' , shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ] \n"), collapse=''    )    
+      } 
+      else {
+        listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ]"), collapse=''    ) 
+      }
+    }  
+    
+    
+    # now plot it
+    a<-paste(c("digraph boxes_and_circles {
+
+               # a 'graph' statement
+               graph [overlap = true, fontsize = 10, layout = dot ]
+
+               # several 'node' statements
+               node [shape = oval,
+               fontname = Helvetica,
+               style = filled]
+
+               node [fillcolor = green]
+               'BEGIN';
+
+               node [fillcolor = red]
+               'END';
+
+               node [fillcolor = orange]
+               ",listaNodiToPrint,"
+
+               edge [arrowsize = 1 ]
+               # several edge
+               ",stringaNodiComplessi,"
+  }"), collapse='')
+    return(a)  
+    
+  }
+  
+  
+  #=================================================================================
+  # constructor
+  #=================================================================================  
+  
+  constructor <- function( verboseMode  ) {
+    loadedDataset <<- list()
+  }
+  constructor(verboseMode = verbose.mode)
+  return(list(
+    "loadDataset" = loadDataset,
+    "plotCumulativeEvent" = plotCumulativeEvent
+  ))
+}
