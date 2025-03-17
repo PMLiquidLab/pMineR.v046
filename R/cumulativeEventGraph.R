@@ -84,6 +84,50 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
 
   }
   
+  plot.p.time.evolution <- function( time.from, time.to, time.step, UM, p.value.threshold = 0.01,
+                                     stratifyForVariableName = "sesso",
+                                     stratificationvaueles.arr.clusterA = c("0"),
+                                     stratificationvaueles.arr.clusterB = c("1"),                                     
+                                     abs.min.threshold.4.edges = 10,threshold = 10,
+                                     verbose = TRUE) {
+    
+    arr.tempi <- seq( time.from, time.to, by = time.step )
+    lst.res <- list()
+    if(verbose == TRUE) pb <- txtProgressBar(min = 0, max = length(arr.tempi), style = 3)
+    pb.ct <- 0
+    for( tempo in arr.tempi ) {
+      pb.ct <- pb.ct + 1;
+      if(verbose == TRUE) setTxtProgressBar(pb, pb.ct)
+      a <- objCEG$plotCumulativeEvent(arr.time.points = c(tempo),UM = UM,
+                                      abs.min.threshold.4.edges = abs.min.threshold.4.edges, 
+                                      threshold = threshold,
+                                      stratifyForVariableName = stratifyForVariableName,
+                                      stratificationvaueles.arr.clusterA = stratificationvaueles.arr.clusterA,
+                                      stratificationvaueles.arr.clusterB = stratificationvaueles.arr.clusterB,
+                                      p.value.threshold = p.value.threshold) 
+      lst.res[[ as.character(tempo) ]] <- a$data
+    }
+    if(verbose == TRUE) close(pb)
+
+    arr.eventi <- unique(unlist(lapply(names(lst.res),function(tempo){ lapply( names(lst.res[[tempo]]), function(bomba){ return(bomba)  } )})))
+    
+    mtr <- c()
+    
+    for(tempo in names(lst.res)) {
+      for( evento in arr.eventi ) {
+        se <- length(lst.res[[tempo]][[evento]] )
+        if(se > 0 ) {
+          riga <- c(   tempo, evento,     lst.res[[tempo]][[evento]]$p.value )
+        } else {
+          riga <- c(   tempo, evento,     1 )
+        }
+        mtr <- rbind( mtr  , riga )
+      }  
+    }
+    colnames(mtr) <- c("time","event","p.value")
+    mtr <- mtr[order(as.numeric(mtr[,"p.value"])),]
+    return(mtr)
+  }
   
   plotCumulativeEvent <- function( 
                           arr.time.points = c(5,10,15), 
@@ -97,7 +141,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                           stratificationvaueles.arr.clusterB = c() ,
                           p.value.threshold = 0.01
                           ) {
-    
+    lst.data = list()
     train(arr.time.points = arr.time.points, UM = UM)
     MM <- objDL.v3.out$MMatrix 
     # prendi la lista dei nomi
@@ -176,6 +220,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
       }
 
       label <- paste(c(listaNodi[i],"\n n=",quanti.passano.per.il.nodo),collapse = '')
+      lst.data[[ listaNodi[i] ]] <- list()
       
       # Se e' stata richiesta una stratificazione 
       if( !is.na(stratifyForVariableName) & !(listaNodi[i] %in% c("BEGIN","END")) ) {
@@ -216,6 +261,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
         if( listaNodi[i] %in% c("BEGIN","END") ) {
           label <- paste(c(listaNodi[i],"\n ",orig.A,"/",orig.B),collapse = '')  
         }
+        lst.data[[ listaNodi[i] ]] <- list( "qta.A" = qta.A, "qta.B" = qta.B, "p.value"=p.value )
       }
       if( listaNodi[i] %in% c("BEGIN","END") & !is.na(stratifyForVariableName)  ) {
         label <- paste(c(listaNodi[i],"\n ",orig.A,"/",orig.B),collapse = '')
@@ -256,7 +302,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                # several edge
                ",stringaNodiComplessi,"
   }"), collapse='')
-    return(a)  
+    return( list("script" = a , "data" = lst.data ) ) 
     
   }
   
@@ -271,6 +317,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
   constructor(verboseMode = verbose.mode)
   return(list(
     "loadDataset" = loadDataset,
-    "plotCumulativeEvent" = plotCumulativeEvent
+    "plotCumulativeEvent" = plotCumulativeEvent,
+    "plot.p.time.evolution" = plot.p.time.evolution
   ))
 }
