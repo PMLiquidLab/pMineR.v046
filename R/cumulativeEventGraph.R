@@ -91,7 +91,12 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                           threshold = 0, 
                           defaultNodeColor = "Gold", 
                           arr.node.col.threshold=c(0.25,0.5,0.75),
-                          abs.min.threshold.4.edges = 0) {
+                          abs.min.threshold.4.edges = 0,
+                          stratifyForVariableName = NA,
+                          stratificationvaueles.arr.clusterA = c(),
+                          stratificationvaueles.arr.clusterB = c() ,
+                          p.value.threshold = 0.01
+                          ) {
     
     train(arr.time.points = arr.time.points, UM = UM)
     MM <- objDL.v3.out$MMatrix 
@@ -102,6 +107,11 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     # la lista dei nodi che vanno a END
     listaNodiToEnd<-listaNodi[which(MM[,"END"]>threshold)]
     
+    if( !is.na(stratifyForVariableName) ) {
+      strat.ID.A <- unique(toChar(objDL.v3.out$original.CSV[[objDL.v3.out$csv.IDName]])[which( toChar(objDL.v3.out$original.CSV[[stratifyForVariableName]]) %in% stratificationvaueles.arr.clusterA )])
+      strat.ID.B <- unique(toChar(objDL.v3.out$original.CSV[[objDL.v3.out$csv.IDName]])[which( toChar(objDL.v3.out$original.CSV[[stratifyForVariableName]]) %in% stratificationvaueles.arr.clusterB )])
+    }    
+
     rigaBEGIN<-''; rigaEND<-''
     for( i in listaNodiFromBegin) { rigaBEGIN<-paste(   c(rigaBEGIN, "'BEGIN'->'",i,"' "), collapse = '') }
     for( i in listaNodiToEnd) { rigaEND<-paste(   c(rigaEND, "'",i,"'->'END' "), collapse = '') }  
@@ -160,9 +170,61 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
       if(ratio >= arr.node.col.threshold[2] & ratio <arr.node.col.threshold[3]) { fillColor <- paste(c(defaultNodeColor,"3"),collapse = ''); fontColor <- "Gray1"  }
       if(ratio >= arr.node.col.threshold[3]) { fillColor <- paste(c(defaultNodeColor,"4"),collapse = ''); fontColor <- "Gray99"  }
       
+      if( !is.na(stratifyForVariableName) ) {
+        orig.A <- length(strat.ID.A)
+        orig.B <- length(strat.ID.B)
+      }
+
+      label <- paste(c(listaNodi[i],"\n n=",quanti.passano.per.il.nodo),collapse = '')
+      
+      # Se e' stata richiesta una stratificazione 
+      if( !is.na(stratifyForVariableName) & !(listaNodi[i] %in% c("BEGIN","END")) ) {
+        # orig.A <- length(strat.ID.A)
+        # orig.B <- length(strat.ID.B)
+        targ.A <- which(objDL.v3.out$original.CSV[[ objDL.v3.out$csv.IDName  ]] %in% strat.ID.A & objDL.v3.out$original.CSV[[ objDL.v3.out$csv.EVENTName  ]] == listaNodi[i] )
+        targ.B <- which(objDL.v3.out$original.CSV[[ objDL.v3.out$csv.IDName  ]] %in% strat.ID.B & objDL.v3.out$original.CSV[[ objDL.v3.out$csv.EVENTName  ]] == listaNodi[i] )
+        if( length(targ.A) > 0 ) {
+          qta.A <- length(unique(objDL.v3.out$original.CSV[targ.A, objDL.v3.out$csv.IDName ]))
+        } else {
+          qta.A <- 0
+        }
+        if( length(targ.B) > 0 ) {
+          qta.B <- length(unique(objDL.v3.out$original.CSV[targ.B, objDL.v3.out$csv.IDName ]))  
+        } else {
+          qta.B <- 0
+        }
+        matrice <- matrix( c(orig.A,orig.B,qta.A,qta.B) , byrow = TRUE, ncol = 2 )
+        p.value <- NA
+        if( sum(matrice) > 30 ) {
+          if( sum(matrice) > 100 ) {
+            p.value <- chisq.test( matrice )$p.value 
+          } else { 
+            p.value <- fisher.test( matrice )$p.value 
+          }
+        }
+        
+        if(is.na(p.value)) p.value <- "NA"
+        if( p.value!="NA" ) {
+          label <- paste(c(listaNodi[i],"\n ",qta.A,"/",orig.A," vs ",qta.B,"/",orig.B,"\np=",round(p.value,digits = 4)),collapse = '')
+          if( p.value <= p.value.threshold ) {
+            fillColor <- "Yellow";
+            fontColor <- "Black"
+          }
+        } else {
+          label <- paste(c(listaNodi[i],"\n ",qta.A,"/",orig.A," vs ",qta.B,"/",orig.B,"\np=NA"),collapse = '')
+        }
+        if( listaNodi[i] %in% c("BEGIN","END") ) {
+          label <- paste(c(listaNodi[i],"\n ",orig.A,"/",orig.B),collapse = '')  
+        }
+      }
+      if( listaNodi[i] %in% c("BEGIN","END") & !is.na(stratifyForVariableName)  ) {
+        label <- paste(c(listaNodi[i],"\n ",orig.A,"/",orig.B),collapse = '')
+      }
+      
       
       if(i<length(listaNodi)) {
-        listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ label='",listaNodi[i],"\n n=",quanti.passano.per.il.nodo,"' , shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ] \n"), collapse=''    )    
+        # listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ label='",listaNodi[i],"\n n=",quanti.passano.per.il.nodo,"' , shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ] \n"), collapse=''    )
+        listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ label='",label,"' , shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ] \n"), collapse=''    )            
       } 
       else {
         listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"' [ shape = 'box' , fillcolor = '",fillColor,"', fontcolor = '",fontColor,"' ]"), collapse=''    ) 
