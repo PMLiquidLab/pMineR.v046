@@ -25,6 +25,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
     objDL.v2.out <- loadedDataset
     arr.atm.evt <- objDL.v2.out$arrayAssociativo
+    # campoData <- objDL.v3.out$csv.dateColumnName
+    # campoEvento <- objDL.v3.out$csv.dateColumnName    
     
     # Comincio
     charToPaste <- "|"
@@ -37,6 +39,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
     csv.EVENTName <- objDL.v2.out$csv.EVENTName
     csv.dateColumnName <- objDL.v2.out$csv.dateColumnName
+    csv.IDName <- objDL.v2.out$csv.IDName
     newMM <- c()
     tmp <- lapply( names(objDL.v2.out$pat.process), function(ID){
       cumulativo.eventi <- c()
@@ -57,7 +60,10 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
           newMM <<- rbind( newMM , nuova.riga)
         } else { 
           nuova.riga <- newMM[ nrow(newMM),  ]
-          nuova.riga["data"] <- ct
+          # -im
+          # nuova.riga["data"] <- ct
+          nuova.riga[ csv.dateColumnName ] <- ct
+          # -fm
           newMM <<- rbind( newMM , nuova.riga)
         }
       }
@@ -65,21 +71,36 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
     aaa <- newMM
     tmp <- unlist(lapply(1:nrow(aaa),function(riga){ 
-      paste(c(aaa[riga,"evento"]," (lev.",aaa[riga,"data"],")"),collapse = '')
+      # -im
+      # paste(c(aaa[riga,"evento"]," (lev.",aaa[riga,"data"],")"),collapse = '')
+      paste(c(aaa[riga,csv.EVENTName]," (lev.",aaa[riga,csv.dateColumnName],")"),collapse = '') 
+      # -fm
     }))
     aaa <- cbind( aaa , "newEvent"=tmp)
     startingDate <- "2000-01-01 00:00:00"
-    arr.Date.Cluster <- unique(newMM[,"data"])
+    # -im
+    # arr.Date.Cluster <- unique(newMM[,"data"])
+    arr.Date.Cluster <- unique(newMM[,csv.dateColumnName])
+    # browser()
+    # -fm
     arr.Date <- unique(arr.Date.Cluster) + as.Date(startingDate)
     names(arr.Date) <- arr.Date.Cluster
     for( i in arr.Date.Cluster ){
-      aaa[which( aaa[,"data"]== i ), "data"] <- as.character(arr.Date[i])
+      # -im
+      # aaa[which( aaa[,"data"]== i ), "data"] <- as.character(arr.Date[i])
+      aaa[which( aaa[,csv.dateColumnName]== i ), csv.dateColumnName] <- as.character(arr.Date[i])      
+      # -fm
     }
     newMM <- aaa
     
     objDL.v3 <- dataLoader(verbose.mode = FALSE)
-    objDL.v3$load.data.frame( mydata =  newMM,IDName = "ID",EVENTName = "newEvent",dateColumnName = "data",
-                              format.column.date = "%Y-%m-%d")
+    # -im 
+    # objDL.v3$load.data.frame( mydata =  newMM,IDName = "ID",EVENTName = "newEvent",dateColumnName = "data",
+    #                           format.column.date = "%Y-%m-%d")
+    # browser()
+    objDL.v3$load.data.frame( mydata =  newMM,IDName = csv.IDName,EVENTName = "newEvent",dateColumnName = csv.dateColumnName,
+                              format.column.date = "%Y-%m-%d")  
+    # -fm
     objDL.v3.out <<- objDL.v3$getData()
 
   }
@@ -306,7 +327,20 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
   }
   
-  
+  toChar<-function( objToCast ) {
+    if( class(objToCast) == "factor" ) {
+      objToCast <- levels(objToCast)[objToCast]    
+    }
+    return(objToCast)
+  }
+
+  tableToChar <- function( MM ) {
+    for( colonna in colnames(MM) ) {
+      MM[[colonna]] <- toChar(MM[[colonna]])
+    }
+    return(MM)
+  }
+
   #=================================================================================
   # constructor
   #=================================================================================  
