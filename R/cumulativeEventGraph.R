@@ -40,7 +40,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     if(UM=="years") arr.time.points <- arr.time.points * 365 * 24 * 60
     if(UM=="months") arr.time.points <- arr.time.points * 30 * 24 * 60
     if(UM=="weeks") arr.time.points <- arr.time.points * 7 * 24 * 60
-    if(UM=="days") arr.time.points <- arr.time.points * 7 * 24 * 60
+    if(UM=="days") arr.time.points <- arr.time.points * 24 * 60
     
     csv.EVENTName <- objDL.v2.out$csv.EVENTName
     csv.dateColumnName <- objDL.v2.out$csv.dateColumnName
@@ -166,6 +166,25 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     colnames(mtr) <- c("time","event","p.value")
     mtr <- mtr[order(as.numeric(mtr[,"p.value"])),]
     return(mtr)
+  }
+  
+  getRepresentativeClusters <- function( clusterNum , UM = "years") {
+    
+    if(UM=="years") arr.time.points <-  365 * 24 * 60
+    if(UM=="months") arr.time.points <-  30 * 24 * 60
+    if(UM=="weeks") arr.time.points <-  7 * 24 * 60
+    if(UM=="days") arr.time.points <-  24 * 60
+    if(UM=="hours") arr.time.points <-  60
+    if(UM=="minutes") arr.time.points <-  1   
+    
+    objDL.v2.out <- loadedDataset
+    quanti <- clusterNum
+    tempi <- unlist(lapply(names(objDL.v2.out$pat.process),function(ID){  objDL.v2.out$pat.process[[ID]]$pMineR.deltaDate  }))
+    tempi <- tempi / arr.time.points
+    tempi <- tempi[which(tempi>0)]
+    arr.quali <- quantile(tempi,seq(0,1,by=1/quanti))
+    arr.quali <- arr.quali[2:(length(arr.quali)-1)]
+    return(arr.quali)
   }
   
   plotCumulativeEvent <- function( 
@@ -391,7 +410,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
   return(list(
     "loadDataset" = loadDataset,
     "plotCumulativeEvent" = plotCumulativeEvent,
-    "plot.p.time.evolution" = plot.p.time.evolution
+    "plot.p.time.evolution" = plot.p.time.evolution,
+    "getRepresentativeClusters"=getRepresentativeClusters
   ))
 }
 
