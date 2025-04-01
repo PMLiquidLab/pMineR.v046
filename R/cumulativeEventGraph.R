@@ -128,6 +128,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                                      stratificationvaueles.arr.clusterA = c("0"),
                                      stratificationvaueles.arr.clusterB = c("1"),                                     
                                      abs.min.threshold.4.edges = 10,threshold = 10,
+                                     catchCensored = FALSE,
                                      verbose = TRUE) {
     
     arr.tempi <- seq( time.from, time.to, by = time.step )
@@ -143,7 +144,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                                       stratifyForVariableName = stratifyForVariableName,
                                       stratificationvaueles.arr.clusterA = stratificationvaueles.arr.clusterA,
                                       stratificationvaueles.arr.clusterB = stratificationvaueles.arr.clusterB,
-                                      p.value.threshold = p.value.threshold) 
+                                      p.value.threshold = p.value.threshold,
+                                      catchCensored = catchCensored) 
       # browser()
       lst.res[[ as.character(tempo) ]] <- a$data
     }
@@ -161,7 +163,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                        lst.res[[tempo]][[evento]]$qta.A , lst.res[[tempo]][[evento]]$qta.B )
         } else {
           riga <- c(   tempo, evento,     1, 
-                       lst.res[[tempo]][[evento]]$qta.A , lst.res[[tempo]][[evento]]$qta.B )
+                       "NA", "NA" )
         }
         mtr <- rbind( mtr  , riga )
       }  
