@@ -144,6 +144,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                                       stratificationvaueles.arr.clusterA = stratificationvaueles.arr.clusterA,
                                       stratificationvaueles.arr.clusterB = stratificationvaueles.arr.clusterB,
                                       p.value.threshold = p.value.threshold) 
+      # browser()
       lst.res[[ as.character(tempo) ]] <- a$data
     }
     if(verbose == TRUE) close(pb)
@@ -156,14 +157,16 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
       for( evento in arr.eventi ) {
         se <- length(lst.res[[tempo]][[evento]] )
         if(se > 0 ) {
-          riga <- c(   tempo, evento,     lst.res[[tempo]][[evento]]$p.value )
+          riga <- c(   tempo, evento,     lst.res[[tempo]][[evento]]$p.value , 
+                       lst.res[[tempo]][[evento]]$qta.A , lst.res[[tempo]][[evento]]$qta.B )
         } else {
-          riga <- c(   tempo, evento,     1 )
+          riga <- c(   tempo, evento,     1, 
+                       lst.res[[tempo]][[evento]]$qta.A , lst.res[[tempo]][[evento]]$qta.B )
         }
         mtr <- rbind( mtr  , riga )
       }  
     }
-    colnames(mtr) <- c("time","event","p.value")
+    colnames(mtr) <- c("time","event","p.value","qta.A","qta.B")
     mtr <- mtr[order(as.numeric(mtr[,"p.value"])),]
     return(mtr)
   }
