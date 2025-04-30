@@ -29,10 +29,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
     objDL.v2.out <- loadedDataset
     arr.atm.evt <- objDL.v2.out$arrayAssociativo
-    # general.arr.censurati.per.livello <<- c()
-    # campoData <- objDL.v3.out$csv.dateColumnName
-    # campoEvento <- objDL.v3.out$csv.dateColumnName    
-    
+
     # Comincio
     charToPaste <- "|"
     arr.time.points <- arr.time.points[which(arr.time.points > 0)]
@@ -48,6 +45,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     newMM <- c()
     arr.censurati.per.livello <- list()
     arr.label.censored <- c()
+    
+    # Frulla per ogni traccia paziente
     tmp <- lapply( names(objDL.v2.out$pat.process), function(ID){
       cumulativo.eventi <- c()
       MM <- objDL.v2.out$pat.process[[ID]]
@@ -55,28 +54,30 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
         lower <- arr.time.points[ct]
         higher <- arr.time.points[ct+1]
         quali <- which( MM$pMineR.deltaDate >= lower & MM$pMineR.deltaDate <= higher   ) 
+        
+        # Se ho eventi in questo time-range
         if( length(quali) > 0) {
           cumulativo.eventi <- unique(c( cumulativo.eventi  , MM[quali,csv.EVENTName] ))
           cumulativo.eventi <- cumulativo.eventi[order(cumulativo.eventi)]
           nuovo.evento <- paste(cumulativo.eventi,collapse = charToPaste)      
-          # if( nuovo.evento == "0|1|1") browser()
           nuova.riga <- MM[quali[1],]
+          
           # set the cluster in the date colums
           nuova.riga[,csv.dateColumnName] <- ct
           nuova.riga[,csv.EVENTName] <- nuovo.evento      
           newMM <<- rbind( newMM , nuova.riga)
         } else { 
-          
+          # Se non ho eventi in questo time-range
           nuova.riga <- newMM[ nrow(newMM),  ]
-          # -im
-          # nuova.riga["data"] <- ct
           nuova.riga[ csv.dateColumnName ] <- ct
-          if( catchCensored == TRUE ) {
+          # -im 
+          if( catchCensored == TRUE & (max(MM$pMineR.deltaDate) < lower) ) {
+          # if( catchCensored == TRUE  ) {       
+          # -fm
             nuova.riga[ csv.EVENTName ] <- CensoredLabelName
             if( !(as.character(ct) %in% names(arr.censurati.per.livello))) {arr.censurati.per.livello[[as.character(ct)]] <<- 0}
             arr.censurati.per.livello[[as.character(ct)]] <<- arr.censurati.per.livello[[as.character(ct)]] + 1
           }
-          # -fm
           newMM <<- rbind( newMM , nuova.riga)
         }
       }
@@ -84,40 +85,25 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     
     aaa <- newMM
     tmp <- unlist(lapply(1:nrow(aaa),function(riga){ 
-      # -im
-      # paste(c(aaa[riga,"evento"]," (lev.",aaa[riga,"data"],")"),collapse = '')
       nome <- paste(c(aaa[riga,csv.EVENTName]," (lev.",aaa[riga,csv.dateColumnName],")"),collapse = '') 
       general.arr.label.levels[[ nome ]] <<- aaa[riga,csv.dateColumnName]
       nome
-      # -fm
     }))
     aaa <- cbind( aaa , "newEvent"=tmp)
     startingDate <- "2000-01-01 00:00:00"
     
     arr.label.censored <- unlist(lapply(unique(aaa[,csv.dateColumnName]),function(livello){ paste( c( CensoredLabelName," (lev.",livello,")"  ),collapse = '') }))
-    # -im
-    # arr.Date.Cluster <- unique(newMM[,"data"])
     arr.Date.Cluster <- unique(newMM[,csv.dateColumnName])
-    # browser()
-    # -fm
     arr.Date <- unique(arr.Date.Cluster) + as.Date(startingDate)
     names(arr.Date) <- arr.Date.Cluster
     for( i in arr.Date.Cluster ){
-      # -im
-      # aaa[which( aaa[,"data"]== i ), "data"] <- as.character(arr.Date[i])
       aaa[which( aaa[,csv.dateColumnName]== i ), csv.dateColumnName] <- as.character(arr.Date[i])      
-      # -fm
     }
     newMM <- aaa
     
     objDL.v3 <- dataLoader(verbose.mode = FALSE)
-    # -im 
-    # objDL.v3$load.data.frame( mydata =  newMM,IDName = "ID",EVENTName = "newEvent",dateColumnName = "data",
-    #                           format.column.date = "%Y-%m-%d")
-    # browser()
     objDL.v3$load.data.frame( mydata =  newMM,IDName = csv.IDName,EVENTName = "newEvent",dateColumnName = csv.dateColumnName,
                               format.column.date = "%Y-%m-%d")  
-    # -fm
     objDL.v3.out <<- objDL.v3$getData()
     general.arr.censurati.per.livello <<- arr.censurati.per.livello
     general.arr.label.censored <<- arr.label.censored
