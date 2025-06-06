@@ -372,7 +372,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                # several edge
                ",stringaNodiComplessi,"
   }"), collapse='')
-    return( list("script" = a , "data" = lst.data ) ) 
+    return( list("script" = a , "data" = lst.data , "new.EL"=objDL.v3.out ) ) 
     
   }
   
