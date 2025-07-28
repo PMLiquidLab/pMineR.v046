@@ -250,7 +250,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # che alla fine conterra' l'intero XML
     ct<-1
     csv.date.format <- dataLog$csv.date.format
-
+    
     # Ricrea la struttura di matrici che conterranno l'esito della computazione
     arr.nodi.end <- str_replace_all(string = WF.struct$info$arr.nodi.end, pattern  = "'",replacement = "")
     list.computation.matrix$trigger <<- matrix(0,ncol = length(names(WF.struct$info$trigger)),nrow = length(names(dataLog$pat.process)))
@@ -277,7 +277,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
         addNote(msg = str_c("\n\t<computation n='",ct,"' IDPaz='",indice,"'>"))
         if(param.verbose == TRUE) cat(str_c("\nBeginning Pat ",indice,"..."))
-
+        # browser()
         res <- playSingleSequence( matriceSequenza = dataLog$pat.process[[ indice ]],
                                                       col.eventName = dataLog$csv.EVENTName,
                                                       col.dateName = dataLog$csv.dateColumnName ,
@@ -471,8 +471,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
     # Analizza TUTTI gli eventi della sequenza
     for( indice.di.sequenza in seq(1,length(sequenza) )) {
+      # browser()
       riga.completa.EventLog <- matriceSequenza[ indice.di.sequenza, ]
-
+# browser()
       # due variabili comode per dopo
       ev.NOW <- sequenza[indice.di.sequenza]
       indice.di.sequenza.ch <- as.character(indice.di.sequenza)
@@ -631,7 +632,9 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         note.set.st.ACTIVE.POST(array.st.ACTIVE.POST = st.ACTIVE)
       }
       # Fai il flush
-      note.flush()
+      settaBrow <- FALSE
+      if( ev.NOW=="visita_dh") {settaBrow <- TRUE}
+      note.flush(debugMode = settaBrow)
 
       # Azzera il tempo di eventuali stati che sono stati resettati
       stati.da.uppgradare <- str_replace_all(st.ACTIVE [ !(st.ACTIVE %in% c("'BEGIN'","'END")) ],"'", "")
@@ -2162,13 +2165,15 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   note.set.error<-function( error ){
     tmpAttr$error <<- error
   }
-  note.flush<-function( ){
+  note.flush<-function( debugMode = FALSE ){
+    # if( debugMode == TRUE ) browser()
     testo<-str_c("\n\t\t<step n='",tmpAttr$stepNumber,"' trg='",tmpAttr$boolean.fired.trigger,"' evt='",tmpAttr$event,"' date='",tmpAttr$event.date,"' pMineR.internal.ID.Evt='",tmpAttr$pMineR.internal.ID.Evt,"'>")
     if(tmpAttr$boolean.fired.trigger==TRUE)  {
       for(i in tmpAttr$st.ACTIVE.PRE) testo<-str_c(testo,"\n\t\t\t<st.ACTIVE.PRE name=",i,"></st.ACTIVE.PRE>")
       for(i in tmpAttr$fired.trigger) testo<-str_c(testo,"\n\t\t\t<fired.trigger name='",i,"'></fired.trigger>")
       for(i in tmpAttr$st.ACTIVE.POST) testo<-str_c(testo,"\n\t\t\t<st.ACTIVE.POST name=",i,"></st.ACTIVE.POST>")
     }
+    # if( debugMode == TRUE ) browser()
     testo<-str_c(testo,"\n\t\t</step>")
     addNote(msg = testo)
 
