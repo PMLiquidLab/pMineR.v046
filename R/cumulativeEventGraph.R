@@ -25,7 +25,9 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     UM = "years", 
     abs.min.threshold.4.edges = 10,
     catchCensored,
-    CensoredLabelName = "Censored") {
+    CensoredLabelName = "Censored",
+    catchDeath = FALSE,
+    DeathLabelName = "Death") {
     
     objDL.v2.out <- loadedDataset
     arr.atm.evt <- objDL.v2.out$arrayAssociativo
@@ -72,8 +74,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
           nuova.riga[ csv.dateColumnName ] <- ct
           # -im 
           if( catchCensored == TRUE & (max(MM$pMineR.deltaDate) < lower) ) {
-          # if( catchCensored == TRUE  ) {       
-          # -fm
+            # if( catchCensored == TRUE  ) {       
+            # -fm
             nuova.riga[ csv.EVENTName ] <- CensoredLabelName
             if( !(as.character(ct) %in% names(arr.censurati.per.livello))) {arr.censurati.per.livello[[as.character(ct)]] <<- 0}
             arr.censurati.per.livello[[as.character(ct)]] <<- arr.censurati.per.livello[[as.character(ct)]] + 1
@@ -101,6 +103,14 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     }
     newMM <- aaa
     
+    # -im
+    # Se era stato indicato di intercettare i decessi, fallo qui modificando l'EL costruito finora
+    # if( catchDeath == TRUE ) {
+    #   browser()
+    # }
+    # -fm
+    
+    # Prepara l'output
     objDL.v3 <- dataLoader(verbose.mode = FALSE)
     objDL.v3$load.data.frame( mydata =  newMM,IDName = csv.IDName,EVENTName = "newEvent",dateColumnName = csv.dateColumnName,
                               format.column.date = "%Y-%m-%d")  
@@ -114,7 +124,8 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                                      stratificationvaueles.arr.clusterA = c("0"),
                                      stratificationvaueles.arr.clusterB = c("1"),                                     
                                      abs.min.threshold.4.edges = 10,threshold = 10,
-                                     catchCensored = FALSE,
+                                     catchCensored = FALSE, CensoredLabelName = "Censores",
+                                     catchDeath = FALSE, DeathLabelName = "Death",
                                      verbose = TRUE) {
     
     arr.tempi <- seq( time.from, time.to, by = time.step )
@@ -131,7 +142,10 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
                                       stratificationvaueles.arr.clusterA = stratificationvaueles.arr.clusterA,
                                       stratificationvaueles.arr.clusterB = stratificationvaueles.arr.clusterB,
                                       p.value.threshold = p.value.threshold,
-                                      catchCensored = catchCensored) 
+                                      catchCensored = catchCensored,
+                                      CensoredLabelName = CensoredLabelName,
+                                      catchDeath  = catchDeath, 
+                                      DeathLabelName  = DeathLabelName ) 
       # browser()
       lst.res[[ as.character(tempo) ]] <- a$data
     }
@@ -189,11 +203,15 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
     stratificationvaueles.arr.clusterA = c(),
     stratificationvaueles.arr.clusterB = c() ,
     p.value.threshold = 0.01,
-    catchCensored = FALSE, CensoredLabelName="Censored"
+    catchCensored = FALSE, CensoredLabelName="Censored",
+    catchDeath = FALSE, DeathLabelName = "Death"
   ) {
     lst.data = list()
-    train(arr.time.points = arr.time.points, UM = UM , catchCensored = catchCensored ,
-          CensoredLabelName = CensoredLabelName )
+    train(arr.time.points = arr.time.points, UM = UM , 
+          catchCensored = catchCensored,
+          CensoredLabelName = CensoredLabelName,
+          catchDeath = catchDeath, 
+          DeathLabelName = DeathLabelName)
     # browser()
     MM <- objDL.v3.out$MMatrix 
     # prendi la lista dei nomi
@@ -262,7 +280,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
         }
       }
       
-      # if( listaNodi[i] == "D|E (lev.4)" ) browser()
+      # if( listaNodi[i] == "de|M (lev.2)" ) browser()
       
       quanti.passano.per.il.nodo <- sum(MM[,listaNodi[i]])
       totalePerNodo <- sum(MM[,listaNodi[i]])
@@ -322,6 +340,7 @@ cumulativeEvent <- function( verbose.mode = FALSE ) {
           label <- paste(c(listaNodi[i],"\n ",qta.A,"/",orig.A," vs ",qta.B,"/",orig.B,"\np=",round(p.value,digits = 4)),collapse = '')
           if( p.value <= p.value.threshold ) {
             fillColor <- "Yellow";
+            if( qta.A / qta.B > orig.A / orig.B)  fillColor <- "Orange";
             fontColor <- "Black"
           }
         } else {
