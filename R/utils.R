@@ -13,6 +13,36 @@ expand.grid.unique <- function(x, y, include.equals=FALSE) {
   do.call(rbind, lapply(seq_along(x), g))
 }
 # =============================================================================
+#' toChar
+#' 
+#' @description  set to char a single column of a data.frame
+#' @export
+# =============================================================================
+toChar<-function( objToCast , toWhat = "char" ) {
+  if( class(objToCast) == "factor" ) {
+    if(toWhat == "char") {
+      objToCast <- levels(objToCast)[objToCast]
+    }
+    if(toWhat == "numeric") {
+      objToCast <- as.numeric(levels(objToCast)[objToCast]  )
+    }
+    
+  }
+  return(objToCast)
+}
+# =============================================================================
+#' toChar.all
+#' 
+#' @description  set to char a single an enntire dataframe
+#' @export
+# =============================================================================
+toChar.all <- function( Matrice  , toWhat = "char" ) {
+  for( nomeColonna in colnames(Matrice) ) {
+    Matrice[[ nomeColonna ]] <- toChar( Matrice[[ nomeColonna ]] , toWhat = toWhat )
+  }
+  return( Matrice )
+}
+# =============================================================================
 #' the utils class
 #' 
 #' @description  A class which provide some tools. 
