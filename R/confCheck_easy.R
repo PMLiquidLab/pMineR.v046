@@ -1744,8 +1744,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       }
       
       
-      matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
-      
+      matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.B),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+# browser()
       if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
       if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
       if( p.value <= p.value.threshold ) {
@@ -1818,7 +1818,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
           pre.ID.passing.B <- c()
         }
         
-        matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+        matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.B),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
         
         if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
         if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
@@ -1893,7 +1893,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
             pre.ID.passing.B <- c()
           }
           
-          matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.A),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
+          matriciona <- (matrix( c(length(BEG.ID.passing.A),length(BEG.ID.passing.B),length(pre.ID.passing.A),length(pre.ID.passing.B)), ncol=2, byrow = T))
           
           if( chisq == TRUE) p.value <- chisq.test(matriciona)$p.value
           if( fisher == TRUE) p.value <- fisher.test(matriciona)$p.value      
