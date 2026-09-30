@@ -285,7 +285,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                                                       event.interpretation = event.interpretation,
                                                       date.format = dataLog$csv.date.format, UM = UM, 
                                                       store.computation.matrix= TRUE , debug = debug)
-
+        # browser()
         if(param.verbose == TRUE) cat(str_c("\nPat ",indice," done;"))
         addNote(msg = "\n\t\t<atTheEnd>")
 
@@ -680,11 +680,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
           return( list( "st.ACTIVE"=st.ACTIVE,"error"=error,"last.fired.trigger"=last.fired.trigger, "date" = data.ev.NOW  ) )
         }
         # Se hai rilevato qualche trigger attivo
+        # cat("\n",newHop$active.trigger)
         if(length(newHop$active.trigger)!=0)  {
           # verifica che la lista dei nodi attivi ed trigger non siano gia' avvenuto Se no, rischio un loop infinito
           # Se non e' null, significa che e' gia' scattato in passato
           
           # -im -RG : tentativo goffo di impedire che si inchiodi quando length(last.fired.trigger)>1
+          # cat("\n last.fired.trigger=",last.fired.trigger)
+          # browser()
           if( length(last.fired.trigger)<2) {
           # -fm
             if(!is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) {
@@ -698,7 +701,22 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                 }
               }
             }
+            # -im -RG
+          } else {
+            for( avTrig in last.fired.trigger ) {
+              for(tmptmptmp in names(list.to.avoid.inifinte.loop[[ avTrig ]])) {
+                # se la lunghezza e' uguale
+                if(length(list.to.avoid.inifinte.loop[[ avTrig ]][[tmptmptmp]]) == length(newHop$st.ACTIVE)) {
+                  # e se sono TUTTI uguali
+                  if(sum(newHop$st.ACTIVE %in% list.to.avoid.inifinte.loop[[ avTrig ]][[tmptmptmp]]) == length(newHop$st.ACTIVE)) {
+                    sono.in.un.loop.infinito <- TRUE
+                  }
+                }
+              }
+            }  
           }
+          # -fm -RG
+          
           if( sono.in.un.loop.infinito == FALSE ) {
             note.setEvent(eventType = '', eventDate = data.ev.NOW, pMineR.internal.ID.Evt = '' )
             note.set.st.ACTIVE.PRE(array.st.ACTIVE.PRE = st.ACTIVE)
@@ -711,8 +729,27 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
             # aggiorna la lista che contiene i trigger eseguiti e le condizioni si stato cosi' da poterla poi confrontare
             # in futuro. Se non lo facessi, rischiei un loop infinito
-            if( is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) list.to.avoid.inifinte.loop[[ last.fired.trigger ]]<-list()
-            list.to.avoid.inifinte.loop[[ last.fired.trigger ]][[as.character(length(list.to.avoid.inifinte.loop[[ last.fired.trigger ]])+1) ]] <-  st.ACTIVE
+
+            # -im 
+            # tentativo di evitare inchiodamento 20260821
+            # if( is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) list.to.avoid.inifinte.loop[[ last.fired.trigger ]]<-list()
+            if(length(last.fired.trigger)>1) {
+              for( coppola in last.fired.trigger ) {
+                # list.to.avoid.inifinte.loop[[ coppola ]]<-list()  
+                if( is.null(list.to.avoid.inifinte.loop[[ coppola ]] )) list.to.avoid.inifinte.loop[[ coppola ]]<-list()
+                
+                list.to.avoid.inifinte.loop[[ coppola ]][[as.character(length(list.to.avoid.inifinte.loop[[ coppola ]])+1) ]] <-  st.ACTIVE
+              }
+            } else {
+              if( is.null(list.to.avoid.inifinte.loop[[ last.fired.trigger ]] )) list.to.avoid.inifinte.loop[[ last.fired.trigger ]]<-list()
+              
+              list.to.avoid.inifinte.loop[[ last.fired.trigger ]][[as.character(length(list.to.avoid.inifinte.loop[[ last.fired.trigger ]])+1) ]] <-  st.ACTIVE
+            }
+            
+            # list.to.avoid.inifinte.loop[[ last.fired.trigger ]][[as.character(length(list.to.avoid.inifinte.loop[[ last.fired.trigger ]])+1) ]] <-  st.ACTIVE
+            # -fm
+            
+          
           }
           else devo.restare.in.trigger.loop<-FALSE
         }
@@ -2167,12 +2204,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   }
   note.flush<-function( debugMode = FALSE ){
     # if( debugMode == TRUE ) browser()
+    # browser()
     testo<-str_c("\n\t\t<step n='",tmpAttr$stepNumber,"' trg='",tmpAttr$boolean.fired.trigger,"' evt='",tmpAttr$event,"' date='",tmpAttr$event.date,"' pMineR.internal.ID.Evt='",tmpAttr$pMineR.internal.ID.Evt,"'>")
     if(tmpAttr$boolean.fired.trigger==TRUE)  {
       for(i in tmpAttr$st.ACTIVE.PRE) testo<-str_c(testo,"\n\t\t\t<st.ACTIVE.PRE name=",i,"></st.ACTIVE.PRE>")
       for(i in tmpAttr$fired.trigger) testo<-str_c(testo,"\n\t\t\t<fired.trigger name='",i,"'></fired.trigger>")
       for(i in tmpAttr$st.ACTIVE.POST) testo<-str_c(testo,"\n\t\t\t<st.ACTIVE.POST name=",i,"></st.ACTIVE.POST>")
     }
+    # browser()
     # if( debugMode == TRUE ) browser()
     testo<-str_c(testo,"\n\t\t</step>")
     addNote(msg = testo)
@@ -2193,7 +2232,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
       # list.computation.matrix$trigger[tmpAttr$idPatient, unique(tmpAttr$fired.trigger)]<<- list.computation.matrix$trigger[tmpAttr$idPatient,unique(tmpAttr$fired.trigger)] +1
       # list.computation.matrix$stati.transizione[tmpAttr$idPatient, unique(tmp.stati.post)]<<- list.computation.matrix$stati.transizione[tmpAttr$idPatient,unique(tmp.stati.post)] +1
-      
+      # browser()
       tmpAttr$fired.trigger <- tmpAttr$fired.trigger[which(!tmpAttr$fired.trigger %in% c(""))]
       tmp.stati.post <- tmp.stati.post[which(!tmp.stati.post %in% c(""))]      
       if( length(tmpAttr$fired.trigger) > 0 ) { 
