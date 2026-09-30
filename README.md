@@ -29,7 +29,7 @@ Here you can find information about
 * how to *filter* the Event Log or *remap* the eventusing dictionaries, to manipulate the data
 
 
-http://www.pminer.info/progetti/pMineRTutorialWebsite/01.dataLoader.html
+http://5.249.147.20/progetti/pMineRTutorialWebsite/01.dataLoader.html
 
 
 ### 02 - QOD : Checking/Querying the Data for Quality of Data Assessment
@@ -38,11 +38,11 @@ The class *QOD()* is another useful class. It was born to support Quality of Dat
 
 Here you can find an overview about the most significant features. The example exploits a dataset provided in the following link:
 
-dataset description : http://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD.testing.Dataset.Description.pdf
+dataset description : http://5.249.147.20/progetti/pMineRTutorialWebsite/QOD/QOD.testing.Dataset.Description.pdf
 
-dataset : http://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/EL_CFM_Demo.csv
+dataset : http://5.249.147.20/progetti/pMineRTutorialWebsite/QOD/EL_CFM_Demo.csv
 
-*QOD()* overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/QOD/QOD_tutorial.html
+*QOD()* overview : http://5.249.147.20/progetti/pMineRTutorialWebsite/QOD/QOD_tutorial.html
 
 ### 03 - FOMM : Process Discovery via First Order Markov Model 
 
@@ -50,7 +50,7 @@ The class *firstOrderMarkovModel()* is class for Process Discovery (probably the
 
 Here is an R Markdown that explains how to take the first steps
 
-http://www.pminer.info/progetti/pMineRTutorialWebsite/FOMM/FOMM.html
+http://5.249.147.20/progetti/pMineRTutorialWebsite/FOMM/FOMM.html
 
 ### 04 - CFM : Process Discovery via CareFlow Miner 
 
@@ -58,21 +58,21 @@ The class *careFlowMiner()* is class for Process Discovery via this other method
 
 Here is an R Markdown that explains how to take the first steps
 
-http://www.pminer.info/progetti/pMineRTutorialWebsite/CFM/CFM_tutorial.html
+http://5.249.147.20/progetti/pMineRTutorialWebsite/CFM/CFM_tutorial.html
 
 
 ### 05 - PWL: Conformance Checking and Computer Interpretable Guidelines – part 1
 
 A *Hello World* with PWL, a formalism born for representing simple Clinical Guidelines and make Conformance Checking.
 
-csv for test : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/csv/one.overview.csv
-XML with the process : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/XML-PWL/one.overview.xml
-Overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.1/PWL.1.html
+csv for test : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.1/csv/one.overview.csv
+XML with the process : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.1/XML-PWL/one.overview.xml
+Overview : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.1/PWL.1.html
 
 ### 06 - PWL: Conformance Checking and Computer Interpretable Guidelines – part 1 
 
 A more complex Example with PWL :
 
-csv for test : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/csv/four.generated.csv
-XML with the process : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/XML-PWL/four.overview.xml
-Overview : http://www.pminer.info/progetti/pMineRTutorialWebsite/PWL.2/PWL.2.html
+csv for test : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.2/csv/four.generated.csv
+XML with the process : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.2/XML-PWL/four.overview.xml
+Overview : http://5.249.147.20/progetti/pMineRTutorialWebsite/PWL.2/PWL.2.html
